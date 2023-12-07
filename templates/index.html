@@ -54,13 +54,30 @@
       input[type="submit"]:hover {
         background-color: #d29656;
       }
-
+      .loader {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 2s linear infinite;
+        display: none; /* Hide by default */
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        margin: -25px 0 0 -25px; /* Adjust to center the spinner */
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <h1>Density Scanner Tool</h1>
-      <h3>Event and Transaction density graphed</h3>
+      <h3>Event and Transaction density</h3>
+      <h4>Powered by Hypersync</h4>
       <form method="post">
         <label for="address">Address:</label>
         <input type="text" id="address" name="address" />
@@ -93,5 +110,11 @@
         </select>
         <input type="submit" value="Submit" />
       </form>
+      <div class="loader" id="loader"></div>
+      <script>
+        document.querySelector('form').onsubmit = function() {
+          document.getElementById('loader').style.display = 'block'; 
+        };
+      </script>
   </body>
 </html>

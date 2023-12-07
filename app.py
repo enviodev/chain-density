@@ -126,58 +126,51 @@ def round_based_on_magnitude(number):
 
 def create_plot(directory, request_type):
     plt.figure(figsize=(15, 7))  # Width, Height in inches
-    # Read the log.parquet file
+    
+    # Determine if this is an event request and read the appropriate parquet file
     is_event_request = request_type == "event"
-
-    if is_event_request:
-        df = pd.read_parquet(f'{directory}/log.parquet')
-    else:
-        df = pd.read_parquet(f'{directory}/transaction.parquet')
-
+    file_suffix = 'log' if is_event_request else 'transaction'
+    df = pd.read_parquet(f'{directory}/{file_suffix}.parquet')
 
     # Define the interval size
     min_block = df['block_number'].min()
     max_block = df['block_number'].max()
-
-    interval_size = max(5000, round_based_on_magnitude((max_block - min_block)/ 50))
-
+    interval_size = max(5000, round_based_on_magnitude((max_block - min_block) / 50))
     min_block_rounded = min_block - (min_block % interval_size)
-
     intervals = range(int(min_block_rounded), int(max_block) + interval_size, interval_size)
-
     df['interval'] = pd.cut(df['block_number'], bins=intervals)
 
+    # Generate x labels for the intervals
     x_labels = [f"{format_with_commas(left)}-{format_with_commas(right)}" for left, right in zip(intervals[:-1], intervals[1:])]
 
-    # Plot a histogram for the intervals
     interval_counts = df['interval'].value_counts().sort_index()
     ax = interval_counts.plot(kind='bar', color='lightblue', edgecolor='black')
+
+    ylabel = 'Number of Events' if is_event_request else 'Number of Transactions'
+    title = f'Number of Events per Block Interval (Size {interval_size})' if is_event_request else f'Number of Transactions per Block Interval (Size {interval_size})'
+    
     plt.xlabel('Block Number Interval')
-    plt.ylabel('Number of Logs')
-    plt.title(f'Number of Logs per Block Interval (Size {interval_size})')
+    plt.ylabel(ylabel)
+    plt.title(title)
     plt.xticks(ticks=range(len(x_labels)), labels=x_labels, rotation=45, ha='right')
 
-    # Format the y-axis to show numbers with commas
+    # Format the y-axis to show numbers with commas and create a secondary axis
     ax.get_yaxis().set_major_formatter(ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
-
-    # Create a secondary axis 
     ax2 = ax.twinx()
     ax2.plot(range(len(interval_counts)), interval_counts.cumsum(), color='red', marker='o', linestyle='-')
-    ax2.set_ylabel('Cumulative Total Number of Logs', color='red')
+    ax2.set_ylabel('Cumulative Total', color='red')
     ax2.tick_params(axis='y', colors='red')
     ax2.get_yaxis().set_major_formatter(ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
 
     plt.tight_layout()
 
-    # plt.show()
-
+    # Save the plot to a BytesIO buffer
     buf = io.BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight')
     buf.seek(0)
     plot_url = base64.b64encode(buf.read()).decode('utf-8')
     buf.close()
     return f'data:image/png;base64,{plot_url}'
-
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
