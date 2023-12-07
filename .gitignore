@@ -1,0 +1,4 @@
+data/*.parquet
+data-*/
+data_*/
+venv/
