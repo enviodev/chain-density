@@ -33,26 +33,30 @@ NETWORK_URLS = {
 }
 
 
-
 app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         address = request.form['address']
+        address = address.lower()
+        print(address)
         selected_network = request.form['network']
         network_url = NETWORK_URLS.get(selected_network, "https://eth.hypersync.xyz")
-        directory = asyncio.run(fetch_data(address, selected_network, network_url))
-        img = create_plot(directory)
-        return render_template('plot.html', plot_url=img)
+        try:
+            directory = asyncio.run(fetch_data(address, selected_network, network_url))
+            img = create_plot(directory)
+            return render_template('plot.html', plot_url=img)
+        except Exception as e:
+            print(f"Error: {e}")
+            return render_template('error.html', message="An unexpected error occurred.")
+
     return render_template('index.html')
 
-async def fetch_data(address, selected_network, network_url):
-        # Create hypersync client using the mainnet hypersync endpoint
-    client = hypersync.hypersync_client(network_url)
 
-    # height = await client.get_height()
-    # print("Height:", height)
+async def fetch_data(address, selected_network, network_url):
+    # Create hypersync client using the chosen hypersync endpoint
+    client = hypersync.hypersync_client(network_url)
 
     # The query to run
     query = {
@@ -63,8 +67,6 @@ async def fetch_data(address, selected_network, network_url):
         },
     }
 
-    print(query)
-
     # Create a directory named after the address
     directory = f"data_{selected_network}_{address}"
     if not os.path.exists(directory):
@@ -74,7 +76,7 @@ async def fetch_data(address, selected_network, network_url):
     else:
         if is_parquet_empty(f'{directory}/log.parquet'):
             await client.create_parquet_folder(query, directory)
-            print("Parquet wasn't successfully populated")
+            print("Parquet previously wasn't successfully populated")
         else:
             print("cached parquet, we all good")
 
@@ -91,18 +93,28 @@ def is_parquet_empty(file_path):
         print(f"Error reading the Parquet file: {e}")
         return True  # Assuming file is empty if it cannot be read
 
+def round_based_on_magnitude(number):
+    if number < 100000:
+        # Round to nearest 100000
+        return round(number / 10000) * 10000
+    else:
+        # Round to nearest 1000000
+        return round(number / 100000) * 100000
+    
 
 def create_plot(directory):
     plt.figure(figsize=(15, 9))  # Width, Height in inches
     # Read the log.parquet file
     df = pd.read_parquet(f'{directory}/log.parquet')
 
-        # Define the interval size
-    interval_size = 100000
 
+    # Define the interval size
     min_block = df['block_number'].min()
-    min_block_rounded = min_block - (min_block % interval_size)
     max_block = df['block_number'].max()
+
+    interval_size = max(10000, round_based_on_magnitude((max_block - min_block)/ 50))
+
+    min_block_rounded = min_block - (min_block % interval_size)
 
     intervals = range(int(min_block_rounded), int(max_block) + interval_size, interval_size)
 
