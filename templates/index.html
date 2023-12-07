@@ -1,35 +1,97 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Event Density Viewer</title>
+    <title> Density Viewer</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .container {
+        background-color: #fff;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        width: 300px;
+      }
+      input[type="text"] {
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-sizing: border-box;
+        font-size: 16px;
+      }
+      select {
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+      input[type="submit"] {
+        padding: 10px;
+        background-color: #bb581a;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      input[type="submit"]:hover {
+        background-color: #d29656;
+      }
+
+    </style>
   </head>
   <body>
-    <h1>Enter Smart Contract Address and Select Network</h1>
-    <form method="post">
-      Smart Contract Address: <input type="text" name="address" /><br />
-      Network:
-      <select name="network">
-        <option value="arbitrum">Arbitrum</option>
-        <option value="base">Base</option>
-        <option value="bsc">BSC</option>
-        <option value="eth">Ethereum</option>
-        <option value="gnosis">Gnosis</option>
-        <option value="goerli">Goerli</option>
-        <option value="linea">Linea</option>
-        <option value="optimism">Optimism</option>
-        <option value="polygon">Polygon</option>
-        <option value="scroll">Scroll</option>
-        <option value="sepolia">Sepolia</option>
-        <option value="taiko_jolnr">Taiko Jolnr</option>
-        <option value="manta">Manta</option>
-        <option value="polygon_zkevm">Polygon ZkEVM</option>
-        <option value="metis">Metis</option>
-        <option value="kroma">Kroma</option>
-        <option value="celo">Celo</option>
-        <option value="zksync">zkSync</option>
-        <option value="okbc_testnet">OKBC Testnet</option></select
-      ><br />
-      <input type="submit" value="Submit" />
-    </form>
+    <div class="container">
+      <h1>Density Scanner Tool</h1>
+      <h3>Event and Transaction density graphed</h3>
+      <form method="post">
+        <label for="address">Address:</label>
+        <input type="text" id="address" name="address" />
+        <label for="type">Event or Transaction:</label>
+        <select id="type" name="type">
+          <option value="event">Event</option>
+          <option value="transaction">Transaction</option>
+        </select>
+        <label for="network">Network:</label>
+        <select id="network" name="network">
+          <option value="eth">Ethereum</option>
+          <option value="arbitrum">Arbitrum</option>
+          <option value="base">Base</option>
+          <option value="optimism">Optimism</option>
+          <option value="polygon">Polygon</option>
+          <option value="bsc">BSC</option>
+          <option value="gnosis">Gnosis</option>
+          <option value="goerli">Goerli</option>
+          <option value="linea">Linea</option>
+          <option value="scroll">Scroll</option>
+          <option value="sepolia">Sepolia</option>
+          <option value="taiko_jolnr">Taiko Jolnr</option>
+          <option value="manta">Manta</option>
+          <option value="polygon_zkevm">Polygon ZkEVM</option>
+          <option value="metis">Metis</option>
+          <option value="kroma">Kroma</option>
+          <option value="celo">Celo</option>
+          <option value="zksync">zkSync</option>
+          <option value="okbc_testnet">OKBC Testnet</option>
+        </select>
+        <input type="submit" value="Submit" />
+      </form>
   </body>
 </html>
