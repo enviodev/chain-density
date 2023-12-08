@@ -9,6 +9,8 @@ import matplotlib.ticker as ticker
 import io
 import base64
 import os
+import pyarrow.parquet as pq
+
 
 NETWORK_URLS = {
     "arbitrum": "https://arbitrum.hypersync.xyz",
@@ -88,17 +90,15 @@ async def fetch_data(address, selected_network, network_url, request_type):
 
     # Create a directory named after the address
     directory = f"data/data_{selected_network}_{request_type}_{address}"
+    file_suffix = 'log' if is_event_request else 'transaction'
     if not os.path.exists(directory):
         os.makedirs(directory)
         await client.create_parquet_folder(query, directory)
         print("Finished writing parquet folder")
     else:
-        if is_event_request and is_parquet_empty(f'{directory}/log.parquet'):
+        if not check_parquet_file(f'{directory}/{file_suffix}.parquet'):
             await client.create_parquet_folder(query, directory)
-            print("Parquet previously wasn't successfully populated")
-        elif not is_event_request and is_parquet_empty(f'{directory}/transaction.parquet'):
-            await client.create_parquet_folder(query, directory)
-            print("Parquet previously wasn't successfully populated")
+            print("Parquet previously wasn't successfully populated, parquet recreated")
         else:
             print("cached parquet, we all good")
 
@@ -107,13 +107,16 @@ async def fetch_data(address, selected_network, network_url, request_type):
 def format_with_commas(x):
     return format(int(x), ',')
 
-def is_parquet_empty(file_path):
+
+def check_parquet_file(file_path):
     try:
-        df = pd.read_parquet(file_path)
-        return df.empty
+        parquet_file = pq.ParquetFile(file_path)
+        print(f"{file_path} is a valid Parquet file with {parquet_file.metadata.num_rows} rows.")
+        return True
     except Exception as e:
-        print(f"Error reading the Parquet file: {e}")
-        return True  # Assuming file is empty if it cannot be read
+        print(f"Error reading {file_path}: {e}")
+        return False
+
 
 def round_based_on_magnitude(number):
     if number < 100000:
