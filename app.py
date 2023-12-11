@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, Response
+from quart import Quart, request, render_template
 import hypersync
 import asyncio
 import pandas as pd
@@ -34,26 +34,26 @@ NETWORK_URLS = {
     "okbc_testnet": "https://okbc-testnet.hypersync.xyz"
 }
 
-app = Flask(__name__)
+app = Quart(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
-def index():
+async def index():
     if request.method == 'POST':
-        address = request.form['address']
-        address = address.lower()
-        request_type = request.form['type']
-        selected_network = request.form['network']
+        form_data = await request.form  # Await the form data
+        address = form_data['address'].lower()
+        request_type = form_data['type']
+        selected_network = form_data['network']
         network_url = NETWORK_URLS.get(selected_network, "https://eth.hypersync.xyz")
         try:
-            directory = asyncio.run(fetch_data(address, selected_network, network_url, request_type))
+            directory = await fetch_data(address, selected_network, network_url, request_type)
             img = create_plot(directory, request_type)
             # img = 'data:image/png;base64,./assets/sad-pepe.png'
-            return render_template('plot.html', plot_url=img)
+            return await render_template('plot.html', plot_url=img)
         except Exception as e:
             print(f"Error: {e}")
-            return render_template('error.html', message="An unexpected error occurred.")
+            return await render_template('error.html', message=f"An unexpected error occurred. Error: {e}")
 
-    return render_template('index.html')
+    return await render_template('index.html')
 
 
 async def fetch_data(address, selected_network, network_url, request_type):
