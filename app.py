@@ -67,7 +67,7 @@ async def fetch_data(address, selected_network, network_url, request_type):
             "from_block": 0,
             "logs": [{"address": [address]}],
             "field_selection": {
-                "log": ["block_number", "log_index", "transaction_index"],
+                "log": ["block_number"],
             },
         }
     else:
@@ -82,8 +82,6 @@ async def fetch_data(address, selected_network, network_url, request_type):
             "field_selection": {
                 "transaction": [
                     "block_number",
-                    "transaction_index",
-                    "hash",
                 ],
             },
         }
