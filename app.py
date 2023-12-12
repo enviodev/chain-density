@@ -50,8 +50,12 @@ async def index():
             # img = 'data:image/png;base64,./assets/sad-pepe.png'
             return await render_template('plot.html', plot_url=img)
         except Exception as e:
-            print(f"Error: {e}")
-            return await render_template('error.html', message=f"An unexpected error occurred. Error: {e}")
+            error_message = str(e)
+            print(f"Error: {error_message}")
+            if "cannot convert float NaN to integer" in error_message:
+                return await render_template('error.html', message=f"Error: It is likely there are no {request_type}s on {address} on the {selected_network} network. Please double check this address on an appropriate block explorer. If using the event selection, make sure the smart contract is actually emitting events.")
+            else:
+                return await render_template('error.html', message=f"An unexpected error occurred. Error: {error_message}")
 
     return await render_template('index.html')
 
