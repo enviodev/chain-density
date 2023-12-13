@@ -71,6 +71,38 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+
+      .example-searches {
+        margin-top: 40px;
+        text-align: center;
+      }
+
+      .example-searches ul {
+        list-style: none;
+        padding: 0;
+      }
+
+      .example-searches li {
+        margin-bottom: 8px;
+      }
+
+      .example-searches button {
+        margin-left: 10px;
+        padding: 4px 8px;
+        font-size: 0.6em;
+      }
+
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        margin-bottom: 1px;
+        font-size: 0.6em;
+      }
+
+      .footer .heart {
+        color: #d29656;
+      }
+
     </style>
   </head>
   <!-- Google tag (gtag.js) -->
@@ -126,7 +158,33 @@
         <input type="submit" value="Submit" />
       </form>
       <div class="loader" id="loader"></div>
+      <div class="example-searches">
+        <h4>Example Searches:</h4>
+        <ul>
+          <li>
+            <span>Blast L2 Bridge - Event Density</span>
+            <button onclick="prefillForm('0x5F6AE08B8AeB7078cf2F96AFb089D7c9f51DA47d', 'event', 'eth')">Fill</button>
+          </li>
+          <li>
+            <span>OP Token - Transaction Density</span>
+            <button onclick="prefillForm('0x4200000000000000000000000000000000000042', 'transaction', 'optimism')">Fill</button>
+          </li>
+          <li>
+            <span>Fren Pet - Event Density</span>
+            <button onclick="prefillForm('0x0e22B5f3E11944578b37ED04F5312Dfc246f443C', 'event', 'base')">Fill</button>
+          </li>
+        </ul>
+      </div>
+      <!-- <div class="footer">
+        <p>Made with <span class="heart">❤️</span> by envio</p>
+        <p><a href="https://discord.gg/zNZYBNtbZV" target="_blank">Have ideas? Let's Chat</a></p>
+      </div> -->
       <script>
+          function prefillForm(address, type, network) {
+            document.getElementById('address').value = address;
+            document.getElementById('type').value = type;
+            document.getElementById('network').value = network;
+          }
         document.querySelector('form').onsubmit = function() {
           document.getElementById('loader').style.display = 'block'; 
         };
