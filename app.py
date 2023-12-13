@@ -14,25 +14,32 @@ import pyarrow.parquet as pq
 
 NETWORK_URLS = {
     "arbitrum": "https://arbitrum.hypersync.xyz",
+    "avalanche": "https://avalanche.hypersync.xyz",
     "base": "https://base.hypersync.xyz",
+    "boba": "https://boba.hypersync.xyz",
     "bsc": "https://bsc.hypersync.xyz",
+    "celo": "https://celo.hypersync.xyz",
     "eth": "https://eth.hypersync.xyz",
     "gnosis": "https://gnosis.hypersync.xyz",
+    "gnosis_chiado": "https://gnosis-chiado.hypersync.xyz",
     "goerli": "https://goerli.hypersync.xyz",
+    "holesky": "https://holesky.hypersync.xyz",
+    "kroma": "https://kroma.hypersync.xyz",
     "linea": "https://linea.hypersync.xyz",
+    "lukso": "https://lukso.hypersync.xyz",
+    "manta": "https://manta.hypersync.xyz",
+    "metis": "https://metis.hypersync.xyz",
+    "moonbeam": "https://moonbeam.hypersync.xyz",
+    "okbc_testnet": "https://okbc-testnet.hypersync.xyz",
     "optimism": "https://optimism.hypersync.xyz",
     "polygon": "https://polygon.hypersync.xyz",
+    "polygon_zkevm": "https://polygon-zkevm.hypersync.xyz",
     "scroll": "https://scroll.hypersync.xyz",
     "sepolia": "https://sepolia.hypersync.xyz",
     "taiko_jolnr": "https://taiko-jolnr.hypersync.xyz",
-    "manta": "https://manta.hypersync.xyz",
-    "polygon_zkevm": "https://polygon-zkevm.hypersync.xyz",
-    "metis": "https://metis.hypersync.xyz",
-    "kroma": "https://kroma.hypersync.xyz",
-    "celo": "https://celo.hypersync.xyz",
     "zksync": "https://zksync.hypersync.xyz",
-    "okbc_testnet": "https://okbc-testnet.hypersync.xyz"
 }
+
 
 app = Quart(__name__)
 
