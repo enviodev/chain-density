@@ -2,6 +2,7 @@
 <html>
   <head>
     <title> ChainDensity</title>
+    <link rel="icon" type="image/png" href="../static/densityImage2.png">
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -22,6 +23,7 @@
         text-align: center;
         color: #333;
       }
+
       form {
         display: flex;
         flex-direction: column;
@@ -96,7 +98,7 @@
         text-align: center;
         margin-top: 30px;
         margin-bottom: 1px;
-        font-size: 0.6em;
+        font-size: 0.7em;
       }
 
       .footer .heart {
@@ -116,9 +118,10 @@
   </script>
   <body>
     <div class="container">
-      <h1>ChainDensity</h1>
+      <!-- <h1> <img src="../static/densityImage2.png" alt="ChainDensity Logo" style="width:24px;height:24px;vertical-align:middle;"> ChainDensity </h1> -->
+      <h1> ChainDensity</h1>
       <h3>Event and Transaction density</h3>
-      <h4>Powered by <a href="https://envio.dev" target="_blank">Hypersync</a></h4>
+      <!-- <h4>Powered by <a href="https://envio.dev" target="_blank">Hypersync</a></h4> -->
       <form method="post">
         <label for="address">Address:</label>
         <input type="text" id="address" name="address" />
@@ -175,10 +178,11 @@
           </li>
         </ul>
       </div>
-      <!-- <div class="footer">
-        <p>Made with <span class="heart">❤️</span> by envio</p>
-        <p><a href="https://discord.gg/zNZYBNtbZV" target="_blank">Have ideas? Let's Chat</a></p>
-      </div> -->
+      <div class="footer">
+        <!-- <p>Made with <span class="heart">❤️</span> by envio</p> -->
+        <p>Powered by <a href="https://envio.dev" target="_blank">Hypersync</a></p>
+        <p>Have ideas? <a href="https://discord.gg/zNZYBNtbZV" target="_blank"> Let's Chat</a></p>
+      </div>
       <script>
           function prefillForm(address, type, network) {
             document.getElementById('address').value = address;
