@@ -20,6 +20,7 @@ NETWORK_URLS = {
     "avalanche": "https://avalanche.hypersync.xyz",
     "base": "https://base.hypersync.xyz",
     "base_sepolia": "https://base-sepolia.hypersync.xyz",
+    "blast_sepolia": "https://blast-sepolia.hypersync.xyz",
     "boba": "https://boba.hypersync.xyz",
     "bsc": "https://bsc.hypersync.xyz",
     "c1_milkomeda": "https://c1-milkomeda.hypersync.xyz",
