@@ -10,6 +10,7 @@ import io
 import base64
 import os
 import pyarrow.parquet as pq
+import shutil
 
 
 NETWORK_URLS = {
@@ -81,15 +82,11 @@ async def index():
     return await render_template('index.html')
 
 
-async def fetch_data(address, selected_network, network_url, request_type):
-    # Create hypersync client using the chosen hypersync endpoint
-    client = hypersync.hypersync_client(network_url)
-    is_event_request = request_type == "event"
-
+def create_query(address, start_block, request_type):
     # The query to run
-    if is_event_request:
+    if request_type == "event":
         query = {
-            "from_block": 0,
+            "from_block": start_block,
             "logs": [{"address": [address]}],
             "field_selection": {
                 "log": ["block_number"],
@@ -97,7 +94,7 @@ async def fetch_data(address, selected_network, network_url, request_type):
         }
     else:
         query = {
-            "from_block": 0,
+            "from_block": start_block,
             "transactions": [
                 # We want all the transactions that come from this address
                 {"from": [address]},
@@ -110,22 +107,51 @@ async def fetch_data(address, selected_network, network_url, request_type):
                 ],
             },
         }
+    return query
 
-    # Create a directory named after the address
+
+async def fetch_data(address, selected_network, network_url, request_type):
+    # Create hypersync client using the chosen hypersync endpoint
+    client = hypersync.hypersync_client(network_url)
+    is_event_request = request_type == "event"
+
+    # Define file paths
     directory = f"data/data_{selected_network}_{request_type}_{address}"
     file_suffix = 'log' if is_event_request else 'transaction'
+    file_path = f'{directory}/{file_suffix}.parquet'
+
     if not os.path.exists(directory):
         os.makedirs(directory)
+        query = create_query(address, 0, request_type)
         await client.create_parquet_folder(query, directory)
         print("Finished writing parquet folder")
     else:
-        if not check_parquet_file(f'{directory}/{file_suffix}.parquet'):
-            await client.create_parquet_folder(query, directory)
-            print("Parquet previously wasn't successfully populated, parquet recreated")
+        if check_parquet_file(file_path):
+            # Read the last line of the parquet file
+            df = pd.read_parquet(file_path)
+            last_block = df['block_number'].max()
+
+            # Create a new query starting from the last block + 1
+            new_query = create_query(address, int(last_block) + 1, request_type)
+            new_directory = f"{directory}_temp"
+            await client.create_parquet_folder(new_query, new_directory)
+
+            # Read new data and append it to the existing file
+            new_df = pd.read_parquet(f'{new_directory}/{file_suffix}.parquet')
+            combined_df = pd.concat([df, new_df])
+            combined_df.to_parquet(file_path)
+            print("Updated parquet file with new data")
+
+            # Clean up temporary directory
+            shutil.rmtree(new_directory)
         else:
-            print("cached parquet, we all good")
+            # Parquet file is invalid or does not exist, create new
+            query = create_query(address, 0, request_type)
+            await client.create_parquet_folder(query, directory)
+            print("Parquet was invalid. Recreated the parquet folder")
 
     return directory
+
 
 def format_with_commas(x):
     return format(int(x), ',')
