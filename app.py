@@ -112,7 +112,7 @@ def create_query(address, start_block, request_type):
 
 async def fetch_data(address, selected_network, network_url, request_type):
     # Create hypersync client using the chosen hypersync endpoint
-    client = hypersync.hypersync_client(network_url)
+    client = hypersync.hypersync_client(network_url, "349d40fe-2320-4f86-bfa3-a303c2f82425")
     is_event_request = request_type == "event"
 
     # Define file paths
