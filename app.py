@@ -21,7 +21,9 @@ NETWORK_URLS = {
     "avalanche": "https://avalanche.hypersync.xyz",
     "base": "https://base.hypersync.xyz",
     "base_sepolia": "https://base-sepolia.hypersync.xyz",
+    "berachain": "https://berachain-artio.hypersync.xyz",
     "blast_sepolia": "https://blast-sepolia.hypersync.xyz",
+    "blast": "https://blast.hypersync.xyz",
     "boba": "https://boba.hypersync.xyz",
     "bsc": "https://bsc.hypersync.xyz",
     "c1_milkomeda": "https://c1-milkomeda.hypersync.xyz",
@@ -41,17 +43,21 @@ NETWORK_URLS = {
     "mantle": "https://mantle.hypersync.xyz",
     "metis": "https://metis.hypersync.xyz",
     "moonbeam": "https://moonbeam.hypersync.xyz",
+    "neonevm": "https://neon-evm.hypersync.xyz",
     "okbc_testnet": "https://okbc-testnet.hypersync.xyz",
     "optimism": "https://optimism.hypersync.xyz",
     "optimism_sepolia": "https://optimism-sepolia.hypersync.xyz",
     "polygon": "https://polygon.hypersync.xyz",
     "polygon_zkevm": "https://polygon-zkevm.hypersync.xyz",
     "public_goods": "https://publicgoods.hypersync.xyz",
+    "rsk": "https://rsk.hypersync.xyz",
     "scroll": "https://scroll.hypersync.xyz",
     "sepolia": "https://sepolia.hypersync.xyz",
+    "shimmerevm": "https://shimmer-evm.hypersync.xyz",
     "taiko_jolnr": "https://taiko-jolnr.hypersync.xyz",
     "zksync": "https://zksync.hypersync.xyz",
-    "zora": "https://zora.hypersync.xyz"
+    "zora": "https://zora.hypersync.xyz",
+    "zeta": "https://zeta.hypersync.xyz"
 }
 
 
