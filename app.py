@@ -1,5 +1,6 @@
 from quart import Quart, request, render_template
 import hypersync
+from hypersync import LogSelection, LogField, DataType, FieldSelection, ColumnMapping, TransactionField
 import asyncio
 import pandas as pd
 import matplotlib
@@ -90,35 +91,48 @@ async def index():
 
 def create_query(address, start_block, request_type):
     # The query to run
-    if request_type == "event":
-        query = {
-            "from_block": start_block,
-            "logs": [{"address": [address]}],
-            "field_selection": {
-                "log": ["block_number"],
-            },
-        }
-    else:
-        query = {
-            "from_block": start_block,
-            "transactions": [
-                # We want all the transactions that come from this address
-                {"from": [address]},
-                # We want all the transactions that went to this address
-                {"to": [address]},
+    # if request_type == "event": 
+    query = hypersync.Query(
+        from_block=start_block,
+        logs=[LogSelection(
+            address=[address],
+        )],
+        field_selection=FieldSelection(
+            log=[
+                LogField.BLOCK_NUMBER,
             ],
-            "field_selection": {
-                "transaction": [
-                    "block_number",
-                ],
-            },
-        }
+        ),
+    )
+        # query = {
+        #     "from_block": start_block,
+        #     "logs": [{"address": [address]}],
+        #     "field_selection": {
+        #         "log": ["block_number"],
+        #     },
+        # }
+    # else:
+    #     query = {
+    #         "from_block": start_block,
+    #         "transactions": [
+    #             # We want all the transactions that come from this address
+    #             {"from": [address]},
+    #             # We want all the transactions that went to this address
+    #             {"to": [address]},
+    #         ],
+    #         "field_selection": {
+    #             "transaction": [
+    #                 "block_number",
+    #             ],
+    #         },
+    #     }
     return query
 
 
 async def fetch_data(address, selected_network, network_url, request_type):
     # Create hypersync client using the chosen hypersync endpoint
-    client = hypersync.hypersync_client(network_url, "349d40fe-2320-4f86-bfa3-a303c2f82425")
+    client = hypersync.HypersyncClient()
+
+    # client = hypersync.hypersync_client(network_url, "349d40fe-2320-4f86-bfa3-a303c2f82425")
     is_event_request = request_type == "event"
 
     # Define file paths
@@ -140,7 +154,20 @@ async def fetch_data(address, selected_network, network_url, request_type):
             # Create a new query starting from the last block + 1
             new_query = create_query(address, int(last_block) + 1, request_type)
             new_directory = f"{directory}_temp"
-            await client.create_parquet_folder(new_query, new_directory)
+            config = hypersync.ParquetConfig(
+                path=new_directory
+                # hex_output=True,
+                # column_mapping=ColumnMapping(
+                #     decoded_log={
+                #         "value": DataType.FLOAT64,
+                #     },
+                #     transaction={
+                #         TransactionField.GAS_USED: DataType.FLOAT64,
+                #     },
+                # ),
+                # event_signature="Transfer(address indexed from, address indexed to, uint256 value)",
+            )
+            await client.create_parquet_folder(new_query, config)
 
             # Read new data and append it to the existing file
             new_df = pd.read_parquet(f'{new_directory}/{file_suffix}.parquet')
@@ -153,7 +180,10 @@ async def fetch_data(address, selected_network, network_url, request_type):
         else:
             # Parquet file is invalid or does not exist, create new
             query = create_query(address, 0, request_type)
-            await client.create_parquet_folder(query, directory)
+            config = hypersync.ParquetConfig(
+                path=directory
+            )
+            await client.create_parquet_folder(query, config)
             print("Parquet was invalid. Recreated the parquet folder")
 
     return directory
