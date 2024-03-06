@@ -2,3 +2,4 @@ data/*.parquet
 data-*/
 data_*/
 venv/
+.env
