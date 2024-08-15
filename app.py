@@ -125,11 +125,20 @@ async def fetch_data(address, selected_network, network_url, request_type):
 
     is_event_request = request_type == "event"
     directory = f"data/data_{selected_network}_{request_type}_{address}"
+    file_suffix = 'logs' if is_event_request else 'transactions'
+    file_path = f'{directory}/{file_suffix}.parquet'
 
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    if os.path.exists(file_path):
+        # Read existing data
+        df = pl.read_parquet(file_path)
+        last_block = df['block_number'].max()
+        start_block = int(last_block) + 1
+    else:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        start_block = 0
 
-    query = create_query(address, 0, request_type)
+    query = create_query(address, start_block, request_type)
 
     config = hypersync.StreamConfig(
         hex_output=hypersync.HexOutput.PREFIXED,
@@ -143,8 +152,43 @@ async def fetch_data(address, selected_network, network_url, request_type):
         ),
     )
 
-    await client.collect_parquet(directory, query, config)
-    print("Finished writing parquet folder")
+    # Fetch new data
+    new_directory = f"{directory}_temp"
+    try:
+        await client.collect_parquet(new_directory, query, config)
+        print("Finished writing new parquet folder")
+
+        new_file_path = f'{new_directory}/{file_suffix}.parquet'
+        if not os.path.exists(new_file_path):
+            raise FileNotFoundError(
+                f"Expected parquet file not created: {new_file_path}")
+
+        # Combine new data with existing data if necessary
+        if os.path.exists(file_path):
+            new_df = pl.read_parquet(new_file_path)
+            if not new_df.is_empty():
+                existing_df = pl.read_parquet(file_path)
+                combined_df = pl.concat([existing_df, new_df])
+                combined_df.write_parquet(file_path)
+                print("Updated parquet file with new data")
+            else:
+                print("No new data to add")
+        else:
+            # If it's the first time, just rename the new file
+            os.rename(new_file_path, file_path)
+            print("Created new parquet file")
+
+    except Exception as e:
+        print(f"Error during data collection: {str(e)}")
+        if os.path.exists(file_path):
+            print("Using existing data due to error in fetching new data")
+        else:
+            raise  # Re-raise the exception if we don't have any existing data
+
+    finally:
+        # Clean up temporary directory
+        if os.path.exists(new_directory):
+            shutil.rmtree(new_directory)
 
     return directory
 
