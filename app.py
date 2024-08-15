@@ -312,8 +312,8 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
         'total_blocks': format_with_commas(total_blocks),
         'total_items': format_with_commas(total_items),
         'elapsed_time': f"{elapsed_time:.2f}",
-        'blocks_per_second': format_with_commas(round(total_blocks / elapsed_time, 2)),
-        'items_per_second': format_with_commas(round(total_items / elapsed_time, 2)),
+        'blocks_per_second': format_with_commas(round(total_blocks / elapsed_time)),
+        'items_per_second': format_with_commas(round(total_items / elapsed_time)),
         'is_event': is_event,
         'is_cached': is_cached
     }
