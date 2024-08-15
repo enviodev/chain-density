@@ -77,11 +77,11 @@ async def index():
         network_url = NETWORK_URLS.get(
             selected_network, "https://eth.hypersync.xyz")
         try:
-            directory, total_blocks, total_events, elapsed_time = await fetch_data(address, selected_network, network_url, request_type)
-            if total_events == 0:
+            directory, total_blocks, total_items, elapsed_time, start_block, is_cached = await fetch_data(address, selected_network, network_url, request_type)
+            if total_items == 0:
                 return await render_template('error.html', message=f"No {request_type}s found for {address} on the {selected_network} network.")
             img, stats = create_plot(
-                directory, request_type, total_blocks, total_events, elapsed_time)
+                directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached)
             return await render_template('plot.html', plot_url=img, stats=stats)
         except Exception as e:
             error_message = str(e)
@@ -130,9 +130,10 @@ async def fetch_data(address, selected_network, network_url, request_type):
 
     start_time = time.time()
     total_blocks = 0
-    total_events = 0
+    total_items = 0
 
-    if os.path.exists(file_path):
+    is_cached = os.path.exists(file_path)
+    if is_cached:
         existing_df = pl.read_parquet(file_path)
         last_block = existing_df['block_number'].max()
         start_block = int(last_block) + 1
@@ -188,8 +189,8 @@ async def fetch_data(address, selected_network, network_url, request_type):
 
         total_blocks = combined_df['block_number'].max(
         ) - combined_df['block_number'].min() + 1
-        total_events = len(combined_df)
-        print(f"Total blocks: {total_blocks}, Total events: {total_events}")
+        total_items = len(combined_df)
+        print(f"Total blocks: {total_blocks}, Total events: {total_items}")
 
     except Exception as e:
         print(f"Error during data collection: {str(e)}")
@@ -197,18 +198,18 @@ async def fetch_data(address, selected_network, network_url, request_type):
             print("Using existing data due to error in fetching new data")
             total_blocks = existing_df['block_number'].max(
             ) - existing_df['block_number'].min() + 1
-            total_events = len(existing_df)
+            total_items = len(existing_df)
         else:
             print("No data available")
             total_blocks = 0
-            total_events = 0
+            total_items = 0
 
     finally:
         if os.path.exists(new_directory):
             shutil.rmtree(new_directory)
 
     elapsed_time = time.time() - start_time
-    return directory, total_blocks, total_events, elapsed_time
+    return directory, total_blocks, total_items, elapsed_time, start_block, is_cached
 
 
 def analyze_data(directory, request_type):
@@ -246,7 +247,7 @@ def round_based_on_magnitude(number):
         return round(number / 100000) * 100000
 
 
-def create_plot(directory, request_type, total_blocks, total_events, elapsed_time):
+def create_plot(directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached):
     plt.figure(figsize=(15, 7))  # Width, Height in inches
 
     # Determine if this is an event request and read the appropriate parquet file
@@ -301,12 +302,20 @@ def create_plot(directory, request_type, total_blocks, total_events, elapsed_tim
     plot_url = base64.b64encode(buf.read()).decode('utf-8')
     buf.close()
 
+    is_event = request_type == "event"
+    item_type = "Events" if is_event else "Transactions"
+
+    if start_block == 0:
+        total_blocks = max(total_blocks, df['block_number'].max())
+
     stats = {
         'total_blocks': format_with_commas(total_blocks),
-        'total_events': format_with_commas(total_events),
+        'total_items': format_with_commas(total_items),
         'elapsed_time': f"{elapsed_time:.2f}",
-        'blocks_per_second': f"{total_blocks / elapsed_time:.2f}",
-        'events_per_second': f"{total_events / elapsed_time:.2f}"
+        'blocks_per_second': format_with_commas(round(total_blocks / elapsed_time, 2)),
+        'items_per_second': format_with_commas(round(total_items / elapsed_time, 2)),
+        'is_event': is_event,
+        'is_cached': is_cached
     }
 
     return f'data:image/png;base64,{plot_url}', stats
