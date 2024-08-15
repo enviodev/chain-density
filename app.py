@@ -235,10 +235,8 @@ def format_with_commas(value):
 def check_parquet_file(file_path):
     try:
         parquet_file = pq.ParquetFile(file_path)
-        print(
-            f"{file_path} is a valid Parquet file with "
-            f"{parquet_file.metadata.num_rows} rows."
-        )
+        print(f"{file_path} is a valid Parquet file with "
+              f"{parquet_file.metadata.num_rows} rows.")
         return True
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
@@ -280,8 +278,9 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
     ax = interval_counts.plot(kind='bar', color='lightblue', edgecolor='black')
 
     ylabel = 'Number of Events' if is_event_request else 'Number of Transactions'
-    title = f'Number of Events per Block Interval (Size {
-        interval_size})' if is_event_request else f'Number of Transactions per Block Interval (Size {interval_size})'
+    title = (f'Number of Events per Block Interval (Size {interval_size})'
+             if is_event_request
+             else f'Number of Transactions per Block Interval (Size {interval_size})')
 
     plt.xlabel('Block Number Interval')
     plt.ylabel(ylabel)
