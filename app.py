@@ -235,8 +235,10 @@ def format_with_commas(value):
 def check_parquet_file(file_path):
     try:
         parquet_file = pq.ParquetFile(file_path)
-        print(f"{file_path} is a valid Parquet file with {
-              parquet_file.metadata.num_rows} rows.")
+        print(
+            f"{file_path} is a valid Parquet file with "
+            f"{parquet_file.metadata.num_rows} rows."
+        )
         return True
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
