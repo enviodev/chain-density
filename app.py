@@ -101,10 +101,6 @@ def create_query(address, start_block, request_type):
             field_selection=FieldSelection(
                 log=[
                     LogField.BLOCK_NUMBER,
-                    LogField.TOPIC0,
-                    LogField.TOPIC1,
-                    LogField.TOPIC2,
-                    LogField.DATA,
                 ],
             ),
         )
@@ -118,9 +114,6 @@ def create_query(address, start_block, request_type):
             field_selection=FieldSelection(
                 transaction=[
                     TransactionField.BLOCK_NUMBER,
-                    TransactionField.HASH,
-                    TransactionField.FROM,
-                    TransactionField.TO,
                 ],
             ),
         )
