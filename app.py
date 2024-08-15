@@ -63,7 +63,6 @@ NETWORK_URLS = {
     "zeta": "https://zeta.hypersync.xyz"
 }
 
-
 app = Quart(__name__)
 
 
@@ -178,8 +177,14 @@ async def fetch_data(address, selected_network, network_url, request_type):
             print(f"New data fetched: {len(new_df)} rows")
 
             if existing_df is not None:
-                combined_df = pl.concat([existing_df, new_df])
-                print(f"Combined data: {len(combined_df)} rows")
+                # Check if the schemas match
+                if set(existing_df.columns) != set(new_df.columns):
+                    print(
+                        "Warning: Schema mismatch. Using only existing data. Likely change in HyperSync request not compatible with cached data")
+                    combined_df = existing_df
+                else:
+                    combined_df = pl.concat([existing_df, new_df])
+                    print(f"Combined data: {len(combined_df)} rows")
             else:
                 combined_df = new_df
 
