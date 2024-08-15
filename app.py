@@ -1,3 +1,4 @@
+import time
 import shutil
 import pyarrow.parquet as pq
 import os
@@ -76,17 +77,16 @@ async def index():
         network_url = NETWORK_URLS.get(
             selected_network, "https://eth.hypersync.xyz")
         try:
-            directory = await fetch_data(address, selected_network, network_url, request_type)
-            img = create_plot(directory, request_type)
-            # img = 'data:image/png;base64,./assets/sad-pepe.png'
-            return await render_template('plot.html', plot_url=img)
+            directory, total_blocks, total_items, elapsed_time, start_block, is_cached = await fetch_data(address, selected_network, network_url, request_type)
+            if total_items == 0:
+                return await render_template('error.html', message=f"No {request_type}s found for {address} on the {selected_network} network.")
+            img, stats = create_plot(
+                directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached)
+            return await render_template('plot.html', plot_url=img, stats=stats)
         except Exception as e:
             error_message = str(e)
             print(f"Error: {error_message}")
-            if "cannot convert float NaN to integer" in error_message:
-                return await render_template('error.html', message=f"Error: It is likely there are no {request_type}s on {address} on the {selected_network} network. Please double check this address on an appropriate block explorer. If using the event selection, make sure the smart contract is actually emitting events.")
-            else:
-                return await render_template('error.html', message=f"An unexpected error occurred. Error: {error_message}")
+            return await render_template('error.html', message=f"An unexpected error occurred. Error: {error_message}")
 
     return await render_template('index.html')
 
@@ -125,11 +125,27 @@ async def fetch_data(address, selected_network, network_url, request_type):
 
     is_event_request = request_type == "event"
     directory = f"data/data_{selected_network}_{request_type}_{address}"
+    file_suffix = 'logs' if is_event_request else 'transactions'
+    file_path = f'{directory}/{file_suffix}.parquet'
 
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    start_time = time.time()
+    total_blocks = 0
+    total_items = 0
 
-    query = create_query(address, 0, request_type)
+    is_cached = os.path.exists(file_path)
+    if is_cached:
+        existing_df = pl.read_parquet(file_path)
+        last_block = existing_df['block_number'].max()
+        start_block = int(last_block) + 1
+        print(f"Existing data found. Starting from block {start_block}")
+    else:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        start_block = 0
+        existing_df = None
+        print("No existing data found. Starting from block 0")
+
+    query = create_query(address, start_block, request_type)
 
     config = hypersync.StreamConfig(
         hex_output=hypersync.HexOutput.PREFIXED,
@@ -143,10 +159,57 @@ async def fetch_data(address, selected_network, network_url, request_type):
         ),
     )
 
-    await client.collect_parquet(directory, query, config)
-    print("Finished writing parquet folder")
+    new_directory = f"{directory}_temp"
+    try:
+        print(f"Attempting to collect new data from block {start_block}")
+        await client.collect_parquet(new_directory, query, config)
+        print("Finished writing new parquet folder")
 
-    return directory
+        new_file_path = f'{new_directory}/{file_suffix}.parquet'
+        if not os.path.exists(new_file_path):
+            print("No new data found.")
+            if existing_df is not None:
+                print("Using existing data as no new data was found")
+                combined_df = existing_df
+            else:
+                raise ValueError("No existing data and no new data found.")
+        else:
+            new_df = pl.read_parquet(new_file_path)
+            print(f"New data fetched: {len(new_df)} rows")
+
+            if existing_df is not None:
+                combined_df = pl.concat([existing_df, new_df])
+                print(f"Combined data: {len(combined_df)} rows")
+            else:
+                combined_df = new_df
+
+        combined_df = combined_df.sort("block_number")
+        combined_df.write_parquet(file_path)
+        print(f"Updated parquet file written to {file_path}")
+
+        total_blocks = combined_df['block_number'].max(
+        ) - combined_df['block_number'].min() + 1
+        total_items = len(combined_df)
+        print(f"Total blocks: {total_blocks}, Total events: {total_items}")
+
+    except Exception as e:
+        print(f"Error during data collection: {str(e)}")
+        if existing_df is not None:
+            print("Using existing data due to error in fetching new data")
+            total_blocks = existing_df['block_number'].max(
+            ) - existing_df['block_number'].min() + 1
+            total_items = len(existing_df)
+        else:
+            print("No data available")
+            total_blocks = 0
+            total_items = 0
+
+    finally:
+        if os.path.exists(new_directory):
+            shutil.rmtree(new_directory)
+
+    elapsed_time = time.time() - start_time
+    return directory, total_blocks, total_items, elapsed_time, start_block, is_cached
 
 
 def analyze_data(directory, request_type):
@@ -158,8 +221,10 @@ def analyze_data(directory, request_type):
     return df.to_pandas()
 
 
-def format_with_commas(x):
-    return format(int(x), ',')
+def format_with_commas(value):
+    if isinstance(value, (int, float)):
+        return f"{value:,}"
+    return value
 
 
 def check_parquet_file(file_path):
@@ -182,7 +247,7 @@ def round_based_on_magnitude(number):
         return round(number / 100000) * 100000
 
 
-def create_plot(directory, request_type):
+def create_plot(directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached):
     plt.figure(figsize=(15, 7))  # Width, Height in inches
 
     # Determine if this is an event request and read the appropriate parquet file
@@ -236,7 +301,24 @@ def create_plot(directory, request_type):
     buf.seek(0)
     plot_url = base64.b64encode(buf.read()).decode('utf-8')
     buf.close()
-    return f'data:image/png;base64,{plot_url}'
+
+    is_event = request_type == "event"
+    item_type = "Events" if is_event else "Transactions"
+
+    if start_block == 0:
+        total_blocks = max(total_blocks, df['block_number'].max())
+
+    stats = {
+        'total_blocks': format_with_commas(total_blocks),
+        'total_items': format_with_commas(total_items),
+        'elapsed_time': f"{elapsed_time:.2f}",
+        'blocks_per_second': format_with_commas(round(total_blocks / elapsed_time, 2)),
+        'items_per_second': format_with_commas(round(total_items / elapsed_time, 2)),
+        'is_event': is_event,
+        'is_cached': is_cached
+    }
+
+    return f'data:image/png;base64,{plot_url}', stats
 
 
 if __name__ == '__main__':
