@@ -1,17 +1,19 @@
+import time
+import shutil
+import pyarrow.parquet as pq
+import os
+import base64
+import io
+import matplotlib.ticker as ticker
+import matplotlib.pyplot as plt
 from quart import Quart, request, render_template
 import hypersync
-from hypersync import LogSelection, LogField, DataType, FieldSelection, ColumnMapping, TransactionField
+from hypersync import LogSelection, LogField, DataType, FieldSelection, ColumnMapping, TransactionField, ClientConfig, JoinMode, TransactionSelection
 import asyncio
 import pandas as pd
+import polars as pl
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import io
-import base64
-import os
-import pyarrow.parquet as pq
-import shutil
 
 
 NETWORK_URLS = {
@@ -62,8 +64,8 @@ NETWORK_URLS = {
 }
 
 
-
 app = Quart(__name__)
+
 
 @app.route('/', methods=['GET', 'POST'])
 async def index():
@@ -72,121 +74,164 @@ async def index():
         address = form_data['address'].lower()
         request_type = form_data['type']
         selected_network = form_data['network']
-        network_url = NETWORK_URLS.get(selected_network, "https://eth.hypersync.xyz")
+        network_url = NETWORK_URLS.get(
+            selected_network, "https://eth.hypersync.xyz")
         try:
-            directory = await fetch_data(address, selected_network, network_url, request_type)
-            img = create_plot(directory, request_type)
-            # img = 'data:image/png;base64,./assets/sad-pepe.png'
-            return await render_template('plot.html', plot_url=img)
+            directory, total_blocks, total_items, elapsed_time, start_block, is_cached = await fetch_data(address, selected_network, network_url, request_type)
+            if total_items == 0:
+                return await render_template('error.html', message=f"No {request_type}s found for {address} on the {selected_network} network.")
+            img, stats = create_plot(
+                directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached)
+            return await render_template('plot.html', plot_url=img, stats=stats)
         except Exception as e:
             error_message = str(e)
             print(f"Error: {error_message}")
-            if "cannot convert float NaN to integer" in error_message:
-                return await render_template('error.html', message=f"Error: It is likely there are no {request_type}s on {address} on the {selected_network} network. Please double check this address on an appropriate block explorer. If using the event selection, make sure the smart contract is actually emitting events.")
-            else:
-                return await render_template('error.html', message=f"An unexpected error occurred. Error: {error_message}")
+            return await render_template('error.html', message=f"An unexpected error occurred. Error: {error_message}")
 
     return await render_template('index.html')
 
 
 def create_query(address, start_block, request_type):
-    # The query to run
-    # if request_type == "event": 
-    query = hypersync.Query(
-        from_block=start_block,
-        logs=[LogSelection(
-            address=[address],
-        )],
-        field_selection=FieldSelection(
-            log=[
-                LogField.BLOCK_NUMBER,
+    if request_type == "event":
+        query = hypersync.Query(
+            from_block=start_block,
+            logs=[LogSelection(
+                address=[address],
+            )],
+            field_selection=FieldSelection(
+                log=[
+                    LogField.BLOCK_NUMBER,
+                ],
+            ),
+        )
+    else:
+        query = hypersync.Query(
+            from_block=start_block,
+            transactions=[
+                TransactionSelection(from_=[address]),
+                TransactionSelection(to=[address]),
             ],
-        ),
-    )
-        # query = {
-        #     "from_block": start_block,
-        #     "logs": [{"address": [address]}],
-        #     "field_selection": {
-        #         "log": ["block_number"],
-        #     },
-        # }
-    # else:
-    #     query = {
-    #         "from_block": start_block,
-    #         "transactions": [
-    #             # We want all the transactions that come from this address
-    #             {"from": [address]},
-    #             # We want all the transactions that went to this address
-    #             {"to": [address]},
-    #         ],
-    #         "field_selection": {
-    #             "transaction": [
-    #                 "block_number",
-    #             ],
-    #         },
-    #     }
+            field_selection=FieldSelection(
+                transaction=[
+                    TransactionField.BLOCK_NUMBER,
+                ],
+            ),
+        )
     return query
 
-def parquet_conf(directory):
-    return hypersync.ParquetConfig(
-        path=directory,
-        batch_size=100000,
-        hex_output=True,
-    )
 
 async def fetch_data(address, selected_network, network_url, request_type):
-    # Create hypersync client using the chosen hypersync endpoint
-    client = hypersync.HypersyncClient()
+    client = hypersync.HypersyncClient(hypersync.ClientConfig(url=network_url))
 
-    # client = hypersync.hypersync_client(network_url, "349d40fe-2320-4f86-bfa3-a303c2f82425")
     is_event_request = request_type == "event"
-
-    # Define file paths
     directory = f"data/data_{selected_network}_{request_type}_{address}"
     file_suffix = 'logs' if is_event_request else 'transactions'
     file_path = f'{directory}/{file_suffix}.parquet'
 
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-        query = create_query(address, 0, request_type)
-        await client.create_parquet_folder(query, parquet_conf(directory))
-        print("Finished writing parquet folder")
+    start_time = time.time()
+    total_blocks = 0
+    total_items = 0
+
+    is_cached = os.path.exists(file_path)
+    if is_cached:
+        existing_df = pl.read_parquet(file_path)
+        last_block = existing_df['block_number'].max()
+        start_block = int(last_block) + 1
+        print(f"Existing data found. Starting from block {start_block}")
     else:
-        if check_parquet_file(file_path):
-            # Read the last line of the parquet file
-            df = pd.read_parquet(file_path)
-            last_block = df['block_number'].max()
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        start_block = 0
+        existing_df = None
+        print("No existing data found. Starting from block 0")
 
-            # Create a new query starting from the last block + 1
-            new_query = create_query(address, int(last_block) + 1, request_type)
-            new_directory = f"{directory}_temp"
-            await client.create_parquet_folder(new_query, parquet_conf(new_directory))
+    query = create_query(address, start_block, request_type)
 
-            # Read new data and append it to the existing file
-            new_df = pd.read_parquet(f'{new_directory}/{file_suffix}.parquet')
-            combined_df = pd.concat([df, new_df])
-            combined_df.to_parquet(file_path)
-            print("Updated parquet file with new data")
+    config = hypersync.StreamConfig(
+        hex_output=hypersync.HexOutput.PREFIXED,
+        column_mapping=ColumnMapping(
+            log={
+                LogField.BLOCK_NUMBER: DataType.INT64,
+            },
+            transaction={
+                TransactionField.BLOCK_NUMBER: DataType.INT64,
+            },
+        ),
+    )
 
-            # Clean up temporary directory
-            shutil.rmtree(new_directory)
+    new_directory = f"{directory}_temp"
+    try:
+        print(f"Attempting to collect new data from block {start_block}")
+        await client.collect_parquet(new_directory, query, config)
+        print("Finished writing new parquet folder")
+
+        new_file_path = f'{new_directory}/{file_suffix}.parquet'
+        if not os.path.exists(new_file_path):
+            print("No new data found.")
+            if existing_df is not None:
+                print("Using existing data as no new data was found")
+                combined_df = existing_df
+            else:
+                raise ValueError("No existing data and no new data found.")
         else:
-            # Parquet file is invalid or does not exist, create new
-            query = create_query(address, 0, request_type)
-            await client.create_parquet_folder(query, parquet_conf(directory))
-            print("Parquet was invalid. Recreated the parquet folder")
+            new_df = pl.read_parquet(new_file_path)
+            print(f"New data fetched: {len(new_df)} rows")
 
-    return directory
+            if existing_df is not None:
+                combined_df = pl.concat([existing_df, new_df])
+                print(f"Combined data: {len(combined_df)} rows")
+            else:
+                combined_df = new_df
+
+        combined_df = combined_df.sort("block_number")
+        combined_df.write_parquet(file_path)
+        print(f"Updated parquet file written to {file_path}")
+
+        total_blocks = combined_df['block_number'].max(
+        ) - combined_df['block_number'].min() + 1
+        total_items = len(combined_df)
+        print(f"Total blocks: {total_blocks}, Total events: {total_items}")
+
+    except Exception as e:
+        print(f"Error during data collection: {str(e)}")
+        if existing_df is not None:
+            print("Using existing data due to error in fetching new data")
+            total_blocks = existing_df['block_number'].max(
+            ) - existing_df['block_number'].min() + 1
+            total_items = len(existing_df)
+        else:
+            print("No data available")
+            total_blocks = 0
+            total_items = 0
+
+    finally:
+        if os.path.exists(new_directory):
+            shutil.rmtree(new_directory)
+
+    elapsed_time = time.time() - start_time
+    return directory, total_blocks, total_items, elapsed_time, start_block, is_cached
 
 
-def format_with_commas(x):
-    return format(int(x), ',')
+def analyze_data(directory, request_type):
+    if request_type == "event":
+        df = pl.read_parquet(f"{directory}/logs.parquet")
+    else:
+        df = pl.read_parquet(f"{directory}/transactions.parquet")
+
+    return df.to_pandas()
+
+
+def format_with_commas(value):
+    if isinstance(value, (int, float)):
+        return f"{value:,}"
+    return value
 
 
 def check_parquet_file(file_path):
     try:
         parquet_file = pq.ParquetFile(file_path)
-        print(f"{file_path} is a valid Parquet file with {parquet_file.metadata.num_rows} rows.")
+        print(f"{file_path} is a valid Parquet file with {
+              parquet_file.metadata.num_rows} rows.")
         return True
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
@@ -200,45 +245,53 @@ def round_based_on_magnitude(number):
     else:
         # Round to nearest 1000000
         return round(number / 100000) * 100000
-    
 
-def create_plot(directory, request_type):
+
+def create_plot(directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached):
     plt.figure(figsize=(15, 7))  # Width, Height in inches
-    
+
     # Determine if this is an event request and read the appropriate parquet file
     is_event_request = request_type == "event"
     file_suffix = 'logs' if is_event_request else 'transactions'
-    df = pd.read_parquet(f'{directory}/{file_suffix}.parquet')
+    df = analyze_data(directory, request_type)
 
     # Define the interval size
     min_block = df['block_number'].min()
     max_block = df['block_number'].max()
-    interval_size = max(5000, round_based_on_magnitude((max_block - min_block) / 50))
+    interval_size = max(5000, round_based_on_magnitude(
+        (max_block - min_block) / 50))
     min_block_rounded = min_block - (min_block % interval_size)
-    intervals = range(int(min_block_rounded), int(max_block) + interval_size, interval_size)
+    intervals = range(int(min_block_rounded), int(
+        max_block) + interval_size, interval_size)
     df['interval'] = pd.cut(df['block_number'], bins=intervals)
 
     # Generate x labels for the intervals
-    x_labels = [f"{format_with_commas(left)}-{format_with_commas(right)}" for left, right in zip(intervals[:-1], intervals[1:])]
+    x_labels = [f"{format_with_commas(
+        left)}-{format_with_commas(right)}" for left, right in zip(intervals[:-1], intervals[1:])]
 
     interval_counts = df['interval'].value_counts().sort_index()
     ax = interval_counts.plot(kind='bar', color='lightblue', edgecolor='black')
 
     ylabel = 'Number of Events' if is_event_request else 'Number of Transactions'
-    title = f'Number of Events per Block Interval (Size {interval_size})' if is_event_request else f'Number of Transactions per Block Interval (Size {interval_size})'
-    
+    title = f'Number of Events per Block Interval (Size {
+        interval_size})' if is_event_request else f'Number of Transactions per Block Interval (Size {interval_size})'
+
     plt.xlabel('Block Number Interval')
     plt.ylabel(ylabel)
     plt.title(title)
-    plt.xticks(ticks=range(len(x_labels)), labels=x_labels, rotation=45, ha='right')
+    plt.xticks(ticks=range(len(x_labels)),
+               labels=x_labels, rotation=45, ha='right')
 
     # Format the y-axis to show numbers with commas and create a secondary axis
-    ax.get_yaxis().set_major_formatter(ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
+    ax.get_yaxis().set_major_formatter(
+        ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
     ax2 = ax.twinx()
-    ax2.plot(range(len(interval_counts)), interval_counts.cumsum(), color='red', marker='o', linestyle='-')
+    ax2.plot(range(len(interval_counts)), interval_counts.cumsum(),
+             color='red', marker='o', linestyle='-')
     ax2.set_ylabel('Cumulative Total', color='red')
     ax2.tick_params(axis='y', colors='red')
-    ax2.get_yaxis().set_major_formatter(ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
+    ax2.get_yaxis().set_major_formatter(
+        ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
 
     plt.tight_layout()
 
@@ -248,7 +301,25 @@ def create_plot(directory, request_type):
     buf.seek(0)
     plot_url = base64.b64encode(buf.read()).decode('utf-8')
     buf.close()
-    return f'data:image/png;base64,{plot_url}'
+
+    is_event = request_type == "event"
+    item_type = "Events" if is_event else "Transactions"
+
+    if start_block == 0:
+        total_blocks = max(total_blocks, df['block_number'].max())
+
+    stats = {
+        'total_blocks': format_with_commas(total_blocks),
+        'total_items': format_with_commas(total_items),
+        'elapsed_time': f"{elapsed_time:.2f}",
+        'blocks_per_second': format_with_commas(round(total_blocks / elapsed_time, 2)),
+        'items_per_second': format_with_commas(round(total_items / elapsed_time, 2)),
+        'is_event': is_event,
+        'is_cached': is_cached
+    }
+
+    return f'data:image/png;base64,{plot_url}', stats
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

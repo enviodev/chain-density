@@ -1,0 +1,6 @@
+quart
+hypersync
+pandas
+matplotlib
+pyarrow
+polars

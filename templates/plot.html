@@ -1,8 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Plot Result</title>
     <link rel="icon" type="image/png" href="../static/densityImage2.png" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .plot-container {
+        width: 100%;
+        max-width: 1750px;
+        margin: 0 auto;
+        overflow: auto;
+      }
+      .plot-image {
+        width: 100%;
+        height: auto;
+        cursor: zoom-in;
+      }
+      .stats {
+        margin-top: 20px;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .stats table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      .stats th,
+      .stats td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      .stats th {
+        background-color: #f2f2f2;
+      }
+    </style>
   </head>
   <!-- Google tag (gtag.js) -->
   <script
@@ -19,8 +59,63 @@
     gtag("config", "G-S9M1R97JGR");
   </script>
   <body>
-    <img src="{{ plot_url }}" />
+    <div class="plot-container">
+      <img src="{{ plot_url }}" alt="Plot" class="plot-image" id="plot-image" />
+    </div>
+
+    <div class="stats">
+      <h2>
+        Statistics {% if stats.is_cached %}(Data Partially Cached){% endif %}
+      </h2>
+      <table>
+        <tr>
+          <th>Metric</th>
+          <th>Value</th>
+        </tr>
+        <tr>
+          <td>Total Blocks Processed</td>
+          <td>{{ stats.total_blocks }}</td>
+        </tr>
+        <tr>
+          <td>
+            Total {% if stats.is_event %}Events{% else %}Transactions{% endif %}
+            Processed
+          </td>
+          <td>{{ stats.total_items }}</td>
+        </tr>
+        <tr>
+          <td>Elapsed Time (seconds)</td>
+          <td>{{ stats.elapsed_time }}</td>
+        </tr>
+        <tr>
+          <td>Blocks per Second</td>
+          <td>{{ stats.blocks_per_second }}</td>
+        </tr>
+        <tr>
+          <td>
+            {% if stats.is_event %}Events{% else %}Transactions{% endif %} per
+            Second
+          </td>
+          <td>{{ stats.items_per_second }}</td>
+        </tr>
+      </table>
+    </div>
+
     <br />
     <a href="/">Make another request</a>
+
+    <script>
+      document
+        .getElementById("plot-image")
+        .addEventListener("click", function () {
+          if (this.style.width === "100%") {
+            this.style.width = "200%";
+            this.style.cursor = "zoom-out";
+          } else {
+            this.style.width = "100%";
+            this.style.cursor = "zoom-in";
+          }
+        });
+    </script>
   </body>
 </html>
