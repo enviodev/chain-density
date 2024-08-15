@@ -271,8 +271,8 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
     df['interval'] = pd.cut(df['block_number'], bins=intervals)
 
     # Generate x labels for the intervals
-    x_labels = [f"{format_with_commas(
-        left)}-{format_with_commas(right)}" for left, right in zip(intervals[:-1], intervals[1:])]
+    x_labels = [f"{format_with_commas(left)}-{format_with_commas(right)}"
+                for left, right in zip(intervals[:-1], intervals[1:])]
 
     interval_counts = df['interval'].value_counts().sort_index()
     ax = interval_counts.plot(kind='bar', color='lightblue', edgecolor='black')
