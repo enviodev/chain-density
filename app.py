@@ -13,68 +13,41 @@ import asyncio
 import pandas as pd
 import polars as pl
 import matplotlib
+import aiohttp
 matplotlib.use('Agg')
 
+CHAIN_DATA = {}
 
-NETWORK_URLS = {
-    "a1_milkomeda": "https://a1-milkomeda.hypersync.xyz",
-    "arbitrum": "https://arbitrum.hypersync.xyz",
-    "arbitrum_nova": "https://arbitrum-nova.hypersync.xyz",
-    "aurora": "https://aurora.hypersync.xyz",
-    "avalanche": "https://avalanche.hypersync.xyz",
-    "base": "https://base.hypersync.xyz",
-    "base_sepolia": "https://base-sepolia.hypersync.xyz",
-    "berachain": "https://berachain-artio.hypersync.xyz",
-    "blast_sepolia": "https://blast-sepolia.hypersync.xyz",
-    "blast": "https://blast.hypersync.xyz",
-    "boba": "https://boba.hypersync.xyz",
-    "bsc": "https://bsc.hypersync.xyz",
-    "c1_milkomeda": "https://c1-milkomeda.hypersync.xyz",
-    "celo": "https://celo.hypersync.xyz",
-    "eth": "https://eth.hypersync.xyz",
-    "fantom": "https://fantom.hypersync.xyz",
-    "flare": "https://flare.hypersync.xyz",
-    "gnosis": "https://gnosis.hypersync.xyz",
-    "gnosis_chiado": "https://gnosis-chiado.hypersync.xyz",
-    "goerli": "https://goerli.hypersync.xyz",
-    "harmony": "https://harmony-shard-0.hypersync.xyz",
-    "holesky": "https://holesky.hypersync.xyz",
-    "kroma": "https://kroma.hypersync.xyz",
-    "linea": "https://linea.hypersync.xyz",
-    "lukso": "https://lukso.hypersync.xyz",
-    "manta": "https://manta.hypersync.xyz",
-    "mantle": "https://mantle.hypersync.xyz",
-    "metis": "https://metis.hypersync.xyz",
-    "moonbeam": "https://moonbeam.hypersync.xyz",
-    "neonevm": "https://neon-evm.hypersync.xyz",
-    "okbc_testnet": "https://okbc-testnet.hypersync.xyz",
-    "optimism": "https://optimism.hypersync.xyz",
-    "optimism_sepolia": "https://optimism-sepolia.hypersync.xyz",
-    "polygon": "https://polygon.hypersync.xyz",
-    "polygon_zkevm": "https://polygon-zkevm.hypersync.xyz",
-    "public_goods": "https://publicgoods.hypersync.xyz",
-    "rsk": "https://rsk.hypersync.xyz",
-    "scroll": "https://scroll.hypersync.xyz",
-    "sepolia": "https://sepolia.hypersync.xyz",
-    "shimmerevm": "https://shimmer-evm.hypersync.xyz",
-    "taiko_jolnr": "https://taiko-jolnr.hypersync.xyz",
-    "zksync": "https://zksync.hypersync.xyz",
-    "zora": "https://zora.hypersync.xyz",
-    "zeta": "https://zeta.hypersync.xyz"
-}
+
+async def fetch_chain_data():
+    async with aiohttp.ClientSession() as session:
+        async with session.get('https://chains.hyperquery.xyz/active_chains') as response:
+            data = await response.json()
+
+    chain_data = {}
+    for chain in data:
+        chain_data[chain['name']] = {
+            'chain_id': chain['chain_id'],
+            'url': f"https://{chain['name']}.hypersync.xyz"
+        }
+    return chain_data
 
 app = Quart(__name__)
 
 
 @app.route('/', methods=['GET', 'POST'])
 async def index():
+    global CHAIN_DATA
+    if not CHAIN_DATA:
+        CHAIN_DATA = await fetch_chain_data()
+
     if request.method == 'POST':
-        form_data = await request.form  # Await the form data
+        form_data = await request.form
         address = form_data['address'].lower()
         request_type = form_data['type']
         selected_network = form_data['network']
-        network_url = NETWORK_URLS.get(
-            selected_network, "https://eth.hypersync.xyz")
+        network_url = CHAIN_DATA.get(selected_network, {}).get(
+            'url', "https://eth.hypersync.xyz")
         try:
             directory, total_blocks, total_items, elapsed_time, start_block, is_cached = await fetch_data(address, selected_network, network_url, request_type)
             if total_items == 0:
@@ -87,7 +60,8 @@ async def index():
             print(f"Error: {error_message}")
             return await render_template('error.html', message=f"An unexpected error occurred. Error: {error_message}")
 
-    return await render_template('index.html')
+    sorted_networks = sorted(CHAIN_DATA.keys())
+    return await render_template('index.html', networks=sorted_networks)
 
 
 def create_query(address, start_block, request_type):
