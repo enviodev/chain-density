@@ -14,9 +14,15 @@ import pandas as pd
 import polars as pl
 import matplotlib
 import aiohttp
+import logging
+import pyarrow as pa
+
 matplotlib.use('Agg')
 
 CHAIN_DATA = {}
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 async def fetch_chain_data():
@@ -93,6 +99,31 @@ def create_query(address, start_block, request_type):
     return query
 
 
+def process_and_write_in_chunks(input_path, output_path, chunk_size=5_000_000):
+    logger.info(f"Processing {input_path} in chunks of {chunk_size}")
+    parquet_file = pl.scan_parquet(input_path)
+    total_rows = parquet_file.select(pl.len()).collect().item()
+
+    schema = None
+    for i in range(0, total_rows, chunk_size):
+        chunk = parquet_file.slice(i, chunk_size).collect()
+        logger.info(f"Processing rows {i} to {i + len(chunk)}")
+        chunk_sorted = chunk.sort("block_number")
+
+        if schema is None:
+            schema = pa.Schema.from_pandas(chunk_sorted.to_pandas())
+            writer = pq.ParquetWriter(output_path, schema)
+
+        table = pa.Table.from_pandas(chunk_sorted.to_pandas(), schema=schema)
+        writer.write_table(table)
+
+        logger.info(f"Written sorted chunk {
+                    i // chunk_size + 1} to {output_path}")
+
+    if schema is not None:
+        writer.close()
+
+
 async def fetch_data(address, selected_network, network_url, request_type):
     client = hypersync.HypersyncClient(hypersync.ClientConfig(url=network_url))
 
@@ -105,81 +136,84 @@ async def fetch_data(address, selected_network, network_url, request_type):
     total_blocks = 0
     total_items = 0
 
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     is_cached = os.path.exists(file_path)
+
     if is_cached:
-        existing_df = pl.read_parquet(file_path)
-        last_block = existing_df['block_number'].max()
+        existing_df = pl.scan_parquet(file_path)
+        last_block = existing_df.select(
+            pl.col("block_number").max()).collect().item()
         start_block = int(last_block) + 1
-        print(f"Existing data found. Starting from block {start_block}")
+        logger.info(f"Existing data found. Starting from block {start_block}")
     else:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
         start_block = 0
         existing_df = None
-        print("No existing data found. Starting from block 0")
+        logger.info("No existing data found. Starting from block 0")
 
     query = create_query(address, start_block, request_type)
-
     config = hypersync.StreamConfig(
         hex_output=hypersync.HexOutput.PREFIXED,
         column_mapping=ColumnMapping(
-            log={
-                LogField.BLOCK_NUMBER: DataType.INT64,
-            },
-            transaction={
-                TransactionField.BLOCK_NUMBER: DataType.INT64,
-            },
+            log={LogField.BLOCK_NUMBER: DataType.INT64},
+            transaction={TransactionField.BLOCK_NUMBER: DataType.INT64},
         ),
     )
 
     new_directory = f"{directory}_temp"
     try:
-        print(f"Attempting to collect new data from block {start_block}")
+        logger.info(f"Attempting to collect new data from block {start_block}")
         await client.collect_parquet(new_directory, query, config)
-        print("Finished writing new parquet folder")
+        logger.info("Finished writing new parquet folder")
 
         new_file_path = f'{new_directory}/{file_suffix}.parquet'
         if not os.path.exists(new_file_path):
-            print("No new data found.")
+            logger.warning("No new data found.")
             if existing_df is not None:
-                print("Using existing data as no new data was found")
-                combined_df = existing_df
+                logger.info("Using existing data as no new data was found")
+                combined_df = existing_df.collect()
             else:
                 raise ValueError("No existing data and no new data found.")
         else:
-            new_df = pl.read_parquet(new_file_path)
-            print(f"New data fetched: {len(new_df)} rows")
+            sorted_file_path = f"{directory}/sorted_{file_suffix}.parquet"
+            process_and_write_in_chunks(new_file_path, sorted_file_path)
 
             if existing_df is not None:
-                # Check if the schemas match
-                if set(existing_df.columns) != set(new_df.columns):
-                    print(
-                        "Warning: Schema mismatch. Using only existing data. Likely change in HyperSync request not compatible with cached data")
-                    combined_df = existing_df
-                else:
-                    combined_df = pl.concat([existing_df, new_df])
-                    print(f"Combined data: {len(combined_df)} rows")
+                # Merge existing and new data
+                combined_df = pl.concat(
+                    [existing_df.collect(), pl.read_parquet(sorted_file_path)])
+                combined_df.sort("block_number").write_parquet(file_path)
             else:
-                combined_df = new_df
+                # Just rename the sorted file to the final file name
+                os.rename(sorted_file_path, file_path)
 
-        combined_df = combined_df.sort("block_number")
-        combined_df.write_parquet(file_path)
-        print(f"Updated parquet file written to {file_path}")
+        # Calculate statistics
+        final_df = pl.scan_parquet(file_path)
+        stats = final_df.select([
+            pl.col("block_number").min().alias("min_block"),
+            pl.col("block_number").max().alias("max_block"),
+            pl.count().alias("total_items")
+        ]).collect()
 
-        total_blocks = combined_df['block_number'].max(
-        ) - combined_df['block_number'].min() + 1
-        total_items = len(combined_df)
-        print(f"Total blocks: {total_blocks}, Total events: {total_items}")
+        total_blocks = stats["max_block"][0] - stats["min_block"][0] + 1
+        total_items = stats["total_items"][0]
+        logger.info(f"Total blocks: {
+                    total_blocks}, Total items: {total_items}")
 
     except Exception as e:
-        print(f"Error during data collection: {str(e)}")
+        logger.error(f"Error during data collection: {str(e)}", exc_info=True)
         if existing_df is not None:
-            print("Using existing data due to error in fetching new data")
-            total_blocks = existing_df['block_number'].max(
-            ) - existing_df['block_number'].min() + 1
-            total_items = len(existing_df)
+            logger.info(
+                "Using existing data due to error in fetching new data")
+            stats = existing_df.select([
+                pl.col("block_number").min().alias("min_block"),
+                pl.col("block_number").max().alias("max_block"),
+                pl.count().alias("total_items")
+            ]).collect()
+            total_blocks = stats["max_block"][0] - stats["min_block"][0] + 1
+            total_items = stats["total_items"][0]
         else:
-            print("No data available")
+            logger.warning("No data available")
             total_blocks = 0
             total_items = 0
 
