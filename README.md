@@ -4,6 +4,8 @@ ChainDensity is a web application that visualizes event and transaction density 
 
 ## Setup
 
+### Option 1: Local Setup
+
 1. Install Python 3.10 or higher.
 
 2. Install uv:
@@ -34,6 +36,24 @@ ChainDensity is a web application that visualizes event and transaction density 
    ```
 
 6. Open your web browser and navigate to `http://localhost:5001`.
+
+### Option 2: Docker Setup
+
+1. Ensure you have Docker installed on your system.
+
+2. Build the Docker image:
+
+   ```
+   docker build -t chaindensity .
+   ```
+
+3. Run the Docker container:
+
+   ```
+   docker run -p 5001:5001 chaindensity
+   ```
+
+4. Open your web browser and navigate to `http://localhost:5001`.
 
 ## Usage
 
