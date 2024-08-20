@@ -17,6 +17,8 @@ import aiohttp
 import logging
 import pyarrow as pa
 import numpy as np
+import psutil
+import signal
 
 matplotlib.use('Agg')
 
@@ -268,6 +270,22 @@ def round_based_on_magnitude(number):
         return round(number / 100000) * 100000
 
 
+def log_memory_usage():
+    process = psutil.Process(os.getpid())
+    memory_info = process.memory_info()
+    logger.info(f"Memory usage: {memory_info.rss / 1024 / 1024:.2f} MB")
+
+
+def signal_handler(signum, frame):
+    logger.error(f"Received signal {signum}. Exiting.")
+    log_memory_usage()
+    exit(1)
+
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
+
 def create_plot(directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached):
     logger.info("Starting create_plot function")
     plt.figure(figsize=(15, 7))
@@ -302,21 +320,33 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
                 intervals[0]}, last: {intervals[-1]}")
 
     logger.info("Calculating interval counts")
+    log_memory_usage()
+
     try:
-        df = df.with_columns([
-            pl.col('block_number').cast(pl.Int64),
-            ((pl.col('block_number') - min_block_rounded) /
-             interval_size).floor().cast(pl.Int64).alias('interval_index')
-        ])
+        chunk_size = 1_000_000  # Adjust this value based on your available memory
+        interval_counts = None
 
-        logger.info(f"Created interval_index column")
+        for chunk in df.iter_slices(chunk_size):
+            logger.info(f"Processing chunk of size {len(chunk)}")
+            chunk = chunk.with_columns([
+                ((pl.col('block_number') - min_block_rounded) /
+                 interval_size).floor().cast(pl.Int64).alias('interval_index')
+            ])
+            chunk_counts = chunk.group_by(
+                'interval_index').agg(pl.len().alias('count'))
 
-        interval_counts = df.group_by('interval_index').agg(
-            pl.count()).sort('interval_index')
+            if interval_counts is None:
+                interval_counts = chunk_counts
+            else:
+                interval_counts = pl.concat([interval_counts, chunk_counts])
+
+            log_memory_usage()
+
+        interval_counts = interval_counts.group_by(
+            'interval_index').agg(pl.sum('count')).sort('interval_index')
         logger.info(f"Grouped by interval_index, shape: {
                     interval_counts.shape}")
 
-        # Add the actual interval boundaries
         interval_counts = interval_counts.with_columns([
             (pl.col('interval_index') * interval_size +
              min_block_rounded).alias('interval_start'),
@@ -325,22 +355,14 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
         ])
         logger.info(f"Added interval boundaries, final shape: {
                     interval_counts.shape}")
-
-        # Log the first few rows to verify the result
         logger.info(f"First few rows of interval_counts:\n{
                     interval_counts.head()}")
+        log_memory_usage()
 
     except Exception as e:
         logger.error(f"Error during interval count calculation: {
                      str(e)}", exc_info=True)
-
-        # Additional debugging information
-        logger.info(f"DataFrame info: {df.schema}")
-        logger.info(f"DataFrame first few rows:\n{df.head()}")
-        logger.info(f"min_block_rounded: {
-                    min_block_rounded}, interval_size: {interval_size}")
-        logger.info(f"Memory usage: {df.estimated_size('mb'):.2f} MB")
-
+        log_memory_usage()
         raise
 
     # Convert to pandas for plotting
@@ -351,8 +373,10 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
         interval_counts_pd.set_index('interval', inplace=True)
         logger.info(f"Converted to pandas DataFrame, shape: {
                     interval_counts_pd.shape}")
+        log_memory_usage()
     except Exception as e:
         logger.error(f"Error converting to pandas: {str(e)}", exc_info=True)
+        log_memory_usage()
         raise
 
     logger.info("Plotting bar chart")
