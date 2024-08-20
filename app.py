@@ -16,6 +16,7 @@ import matplotlib
 import aiohttp
 import logging
 import pyarrow as pa
+import numpy as np
 
 matplotlib.use('Agg')
 
@@ -234,10 +235,7 @@ def analyze_data(directory, request_type):
     try:
         df = pl.read_parquet(file_path)
         logger.info(f"Successfully read Parquet file. Shape: {df.shape}")
-        pandas_df = df.to_pandas()
-        logger.info(f"Successfully converted to pandas DataFrame. Shape: {
-                    pandas_df.shape}")
-        return pandas_df
+        return df
     except Exception as e:
         logger.error(f"Error reading or processing Parquet file: {
                      str(e)}", exc_info=True)
@@ -283,11 +281,10 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
     try:
         logger.info(f"Attempting to read file: {
                     directory}/{file_suffix}.parquet")
-        df = analyze_data(directory, request_type)
-        logger.info(f"Data analyzed successfully, DataFrame shape: {df.shape}")
+        df = pl.read_parquet(f"{directory}/{file_suffix}.parquet")
+        logger.info(f"Data read successfully, DataFrame shape: {df.shape}")
     except Exception as e:
-        logger.error(f"Error in analyze_data function: {
-                     str(e)}", exc_info=True)
+        logger.error(f"Error reading Parquet file: {str(e)}", exc_info=True)
         raise
 
     min_block = df['block_number'].min()
@@ -299,25 +296,24 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
     logger.info(f"Calculated interval size: {interval_size}")
 
     min_block_rounded = min_block - (min_block % interval_size)
-    intervals = range(int(min_block_rounded), int(
-        max_block) + interval_size, interval_size)
+    intervals = np.arange(min_block_rounded, max_block +
+                          interval_size, interval_size)
     logger.info(f"Created intervals, first: {
                 intervals[0]}, last: {intervals[-1]}")
 
-    logger.info("Creating 'interval' column in DataFrame")
-    df['interval'] = pd.cut(df['block_number'], bins=intervals)
-
-    logger.info("Generating x labels for intervals")
-    x_labels = [f"{format_with_commas(left)}-{format_with_commas(right)}"
-                for left, right in zip(intervals[:-1], intervals[1:])]
-    logger.info(f"Generated {len(x_labels)} x labels")
-
     logger.info("Calculating interval counts")
-    interval_counts = df['interval'].value_counts().sort_index()
+    interval_counts = df.group_by(pl.col('block_number').cut(
+        intervals)).agg(pl.count()).sort('block_number')
     logger.info(f"Interval counts calculated, shape: {interval_counts.shape}")
 
+    # Convert to pandas for plotting
+    interval_counts_pd = interval_counts.to_pandas()
+    interval_counts_pd.columns = ['interval', 'count']
+    interval_counts_pd.set_index('interval', inplace=True)
+
     logger.info("Plotting bar chart")
-    ax = interval_counts.plot(kind='bar', color='lightblue', edgecolor='black')
+    ax = interval_counts_pd['count'].plot(
+        kind='bar', color='lightblue', edgecolor='black')
 
     ylabel = 'Number of Events' if is_event_request else 'Number of Transactions'
     title = (f'Number of Events per Block Interval (Size {interval_size})'
@@ -330,6 +326,8 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
     plt.title(title)
 
     logger.info("Setting x-axis ticks and labels")
+    x_labels = [f"{format_with_commas(int(left))}-{format_with_commas(int(right))}"
+                for left, right in zip(intervals[:-1], intervals[1:])]
     plt.xticks(ticks=range(len(x_labels)),
                labels=x_labels, rotation=45, ha='right')
 
@@ -340,7 +338,7 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
     logger.info("Creating secondary y-axis")
     ax2 = ax.twinx()
     logger.info("Plotting cumulative sum on secondary y-axis")
-    ax2.plot(range(len(interval_counts)), interval_counts.cumsum(),
+    ax2.plot(range(len(interval_counts_pd)), interval_counts_pd['count'].cumsum(),
              color='red', marker='o', linestyle='-')
     ax2.set_ylabel('Cumulative Total', color='red')
     ax2.tick_params(axis='y', colors='red')
