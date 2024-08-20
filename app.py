@@ -285,10 +285,12 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
             max_block) + interval_size, interval_size)
         logger.info(f"Interval size: {interval_size}")
 
-        logger.info("Creating intervals and counting occurrences")
+        logger.info("Creating intervals")
         df = df.with_columns(
             pl.col('block_number').cut(intervals).alias('interval')
         )
+        logger.info("Counting occurrences")
+
         interval_counts = df.group_by('interval').count().sort('interval')
         logger.info(f"Interval counts calculated. Shape: {
                     interval_counts.shape}")
