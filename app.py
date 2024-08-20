@@ -261,78 +261,110 @@ def round_based_on_magnitude(number):
 
 
 def create_plot(directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached):
-    plt.figure(figsize=(15, 7))  # Width, Height in inches
+    logger.info("Entering create_plot function")
+    try:
+        logger.info("Creating figure")
+        plt.figure(figsize=(15, 7))  # Width, Height in inches
 
-    # Determine if this is an event request and read the appropriate parquet file
-    is_event_request = request_type == "event"
-    file_suffix = 'logs' if is_event_request else 'transactions'
-    df = analyze_data(directory, request_type)
+        logger.info(f"Request type: {request_type}")
+        is_event_request = request_type == "event"
+        file_suffix = 'logs' if is_event_request else 'transactions'
+        file_path = f"{directory}/{file_suffix}.parquet"
+        logger.info(f"Reading Parquet file: {file_path}")
+        df = pl.read_parquet(file_path)
+        logger.info(f"Parquet file read successfully. Shape: {df.shape}")
 
-    # Define the interval size
-    min_block = df['block_number'].min()
-    max_block = df['block_number'].max()
-    interval_size = max(5000, round_based_on_magnitude(
-        (max_block - min_block) / 50))
-    min_block_rounded = min_block - (min_block % interval_size)
-    intervals = range(int(min_block_rounded), int(
-        max_block) + interval_size, interval_size)
-    df['interval'] = pd.cut(df['block_number'], bins=intervals)
+        logger.info("Calculating interval size")
+        min_block = df['block_number'].min()
+        max_block = df['block_number'].max()
+        logger.info(f"Min block: {min_block}, Max block: {max_block}")
+        interval_size = max(5000, round_based_on_magnitude(
+            (max_block - min_block) / 50))
+        min_block_rounded = min_block - (min_block % interval_size)
+        intervals = range(int(min_block_rounded), int(
+            max_block) + interval_size, interval_size)
+        logger.info(f"Interval size: {interval_size}")
 
-    # Generate x labels for the intervals
-    x_labels = [f"{format_with_commas(left)}-{format_with_commas(right)}"
-                for left, right in zip(intervals[:-1], intervals[1:])]
+        logger.info("Creating intervals and counting occurrences")
+        df = df.with_columns(
+            pl.col('block_number').cut(intervals).alias('interval')
+        )
+        interval_counts = df.group_by('interval').count().sort('interval')
+        logger.info(f"Interval counts calculated. Shape: {
+                    interval_counts.shape}")
 
-    interval_counts = df['interval'].value_counts().sort_index()
-    ax = interval_counts.plot(kind='bar', color='lightblue', edgecolor='black')
+        logger.info("Generating x labels")
+        x_labels = [f"{format_with_commas(left)}-{format_with_commas(right)}"
+                    for left, right in zip(intervals[:-1], intervals[1:])]
 
-    ylabel = 'Number of Events' if is_event_request else 'Number of Transactions'
-    title = (f'Number of Events per Block Interval (Size {interval_size})'
-             if is_event_request
-             else f'Number of Transactions per Block Interval (Size {interval_size})')
+        logger.info("Plotting data")
+        ax = plt.gca()
+        ax.bar(range(len(interval_counts)),
+               interval_counts['count'], color='lightblue', edgecolor='black')
 
-    plt.xlabel('Block Number Interval')
-    plt.ylabel(ylabel)
-    plt.title(title)
-    plt.xticks(ticks=range(len(x_labels)),
-               labels=x_labels, rotation=45, ha='right')
+        ylabel = 'Number of Events' if is_event_request else 'Number of Transactions'
+        title = (f'Number of Events per Block Interval (Size {interval_size})'
+                 if is_event_request
+                 else f'Number of Transactions per Block Interval (Size {interval_size})')
 
-    # Format the y-axis to show numbers with commas and create a secondary axis
-    ax.get_yaxis().set_major_formatter(
-        ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
-    ax2 = ax.twinx()
-    ax2.plot(range(len(interval_counts)), interval_counts.cumsum(),
-             color='red', marker='o', linestyle='-')
-    ax2.set_ylabel('Cumulative Total', color='red')
-    ax2.tick_params(axis='y', colors='red')
-    ax2.get_yaxis().set_major_formatter(
-        ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
+        plt.xlabel('Block Number Interval')
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.xticks(ticks=range(len(x_labels)),
+                   labels=x_labels, rotation=45, ha='right')
 
-    plt.tight_layout()
+        logger.info("Formatting y-axis and creating secondary axis")
+        ax.get_yaxis().set_major_formatter(
+            ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
+        ax2 = ax.twinx()
 
-    # Save the plot to a BytesIO buffer
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight')
-    buf.seek(0)
-    plot_url = base64.b64encode(buf.read()).decode('utf-8')
-    buf.close()
+        logger.info("Calculating cumulative sum")
+        cumulative_sum = interval_counts.select(
+            pl.col('count').cumsum().alias('cumulative')
+        )['cumulative']
+        logger.info(f"Cumulative sum calculated. Length: {
+                    len(cumulative_sum)}")
 
-    is_event = request_type == "event"
-    item_type = "Events" if is_event else "Transactions"
+        ax2.plot(range(len(cumulative_sum)), cumulative_sum,
+                 color='red', marker='o', linestyle='-')
+        ax2.set_ylabel('Cumulative Total', color='red')
+        ax2.tick_params(axis='y', colors='red')
+        ax2.get_yaxis().set_major_formatter(
+            ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
 
-    if start_block == 0:
-        total_blocks = max(total_blocks, df['block_number'].max())
+        logger.info("Adjusting plot layout")
+        plt.tight_layout()
 
-    stats = {
-        'total_blocks': format_with_commas(total_blocks),
-        'total_items': format_with_commas(total_items),
-        'elapsed_time': f"{elapsed_time:.2f}",
-        'blocks_per_second': format_with_commas(round(total_blocks / elapsed_time)),
-        'items_per_second': format_with_commas(round(total_items / elapsed_time)),
-        'is_event': is_event,
-        'is_cached': is_cached
-    }
+        logger.info("Saving plot to buffer")
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight')
+        buf.seek(0)
+        plot_url = base64.b64encode(buf.read()).decode('utf-8')
+        buf.close()
 
-    return f'data:image/png;base64,{plot_url}', stats
+        logger.info("Preparing stats")
+        is_event = request_type == "event"
+        item_type = "Events" if is_event else "Transactions"
+
+        if start_block == 0:
+            total_blocks = max(total_blocks, df['block_number'].max())
+
+        stats = {
+            'total_blocks': format_with_commas(total_blocks),
+            'total_items': format_with_commas(total_items),
+            'elapsed_time': f"{elapsed_time:.2f}",
+            'blocks_per_second': format_with_commas(round(total_blocks / elapsed_time)),
+            'items_per_second': format_with_commas(round(total_items / elapsed_time)),
+            'is_event': is_event,
+            'is_cached': is_cached
+        }
+
+        logger.info("Exiting create_plot function successfully")
+        return f'data:image/png;base64,{plot_url}', stats
+
+    except Exception as e:
+        logger.error(f"Error in create_plot function: {str(e)}", exc_info=True)
+        raise
 
 
 if __name__ == '__main__':
