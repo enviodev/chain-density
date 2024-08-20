@@ -226,12 +226,22 @@ async def fetch_data(address, selected_network, network_url, request_type):
 
 
 def analyze_data(directory, request_type):
-    if request_type == "event":
-        df = pl.read_parquet(f"{directory}/logs.parquet")
-    else:
-        df = pl.read_parquet(f"{directory}/transactions.parquet")
+    logger.info(f"Starting analyze_data function for {request_type}")
+    file_path = f"{directory}/{'logs' if request_type ==
+                               'event' else 'transactions'}.parquet"
+    logger.info(f"Attempting to read Parquet file: {file_path}")
 
-    return df.to_pandas()
+    try:
+        df = pl.read_parquet(file_path)
+        logger.info(f"Successfully read Parquet file. Shape: {df.shape}")
+        pandas_df = df.to_pandas()
+        logger.info(f"Successfully converted to pandas DataFrame. Shape: {
+                    pandas_df.shape}")
+        return pandas_df
+    except Exception as e:
+        logger.error(f"Error reading or processing Parquet file: {
+                     str(e)}", exc_info=True)
+        raise
 
 
 def format_with_commas(value):
@@ -270,8 +280,15 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
     logger.info(f"Request type: {request_type}, file_suffix: {file_suffix}")
 
     logger.info(f"Analyzing data from directory: {directory}")
-    df = analyze_data(directory, request_type)
-    logger.info(f"Data analyzed, DataFrame shape: {df.shape}")
+    try:
+        logger.info(f"Attempting to read file: {
+                    directory}/{file_suffix}.parquet")
+        df = analyze_data(directory, request_type)
+        logger.info(f"Data analyzed successfully, DataFrame shape: {df.shape}")
+    except Exception as e:
+        logger.error(f"Error in analyze_data function: {
+                     str(e)}", exc_info=True)
+        raise
 
     min_block = df['block_number'].min()
     max_block = df['block_number'].max()
