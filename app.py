@@ -302,14 +302,58 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
                 intervals[0]}, last: {intervals[-1]}")
 
     logger.info("Calculating interval counts")
-    interval_counts = df.group_by(pl.col('block_number').cut(
-        intervals)).agg(pl.count()).sort('block_number')
-    logger.info(f"Interval counts calculated, shape: {interval_counts.shape}")
+    try:
+        df = df.with_columns([
+            pl.col('block_number').cast(pl.Int64),
+            ((pl.col('block_number') - min_block_rounded) /
+             interval_size).floor().cast(pl.Int64).alias('interval_index')
+        ])
+
+        logger.info(f"Created interval_index column")
+
+        interval_counts = df.group_by('interval_index').agg(
+            pl.count()).sort('interval_index')
+        logger.info(f"Grouped by interval_index, shape: {
+                    interval_counts.shape}")
+
+        # Add the actual interval boundaries
+        interval_counts = interval_counts.with_columns([
+            (pl.col('interval_index') * interval_size +
+             min_block_rounded).alias('interval_start'),
+            ((pl.col('interval_index') + 1) * interval_size +
+             min_block_rounded).alias('interval_end')
+        ])
+        logger.info(f"Added interval boundaries, final shape: {
+                    interval_counts.shape}")
+
+        # Log the first few rows to verify the result
+        logger.info(f"First few rows of interval_counts:\n{
+                    interval_counts.head()}")
+
+    except Exception as e:
+        logger.error(f"Error during interval count calculation: {
+                     str(e)}", exc_info=True)
+
+        # Additional debugging information
+        logger.info(f"DataFrame info: {df.schema}")
+        logger.info(f"DataFrame first few rows:\n{df.head()}")
+        logger.info(f"min_block_rounded: {
+                    min_block_rounded}, interval_size: {interval_size}")
+        logger.info(f"Memory usage: {df.estimated_size('mb'):.2f} MB")
+
+        raise
 
     # Convert to pandas for plotting
-    interval_counts_pd = interval_counts.to_pandas()
-    interval_counts_pd.columns = ['interval', 'count']
-    interval_counts_pd.set_index('interval', inplace=True)
+    try:
+        interval_counts_pd = interval_counts.to_pandas()
+        interval_counts_pd['interval'] = interval_counts_pd.apply(
+            lambda row: f"{row['interval_start']}-{row['interval_end']}", axis=1)
+        interval_counts_pd.set_index('interval', inplace=True)
+        logger.info(f"Converted to pandas DataFrame, shape: {
+                    interval_counts_pd.shape}")
+    except Exception as e:
+        logger.error(f"Error converting to pandas: {str(e)}", exc_info=True)
+        raise
 
     logger.info("Plotting bar chart")
     ax = interval_counts_pd['count'].plot(
