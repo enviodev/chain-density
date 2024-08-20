@@ -14,9 +14,18 @@ import pandas as pd
 import polars as pl
 import matplotlib
 import aiohttp
+import logging
+import pyarrow as pa
+import numpy as np
+import psutil
+import signal
+
 matplotlib.use('Agg')
 
 CHAIN_DATA = {}
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 async def fetch_chain_data():
@@ -93,6 +102,31 @@ def create_query(address, start_block, request_type):
     return query
 
 
+def process_and_write_in_chunks(input_path, output_path, chunk_size=5_000_000):
+    logger.info(f"Processing {input_path} in chunks of {chunk_size}")
+    parquet_file = pl.scan_parquet(input_path)
+    total_rows = parquet_file.select(pl.len()).collect().item()
+
+    schema = None
+    for i in range(0, total_rows, chunk_size):
+        chunk = parquet_file.slice(i, chunk_size).collect()
+        logger.info(f"Processing rows {i} to {i + len(chunk)}")
+        chunk_sorted = chunk.sort("block_number")
+
+        if schema is None:
+            schema = pa.Schema.from_pandas(chunk_sorted.to_pandas())
+            writer = pq.ParquetWriter(output_path, schema)
+
+        table = pa.Table.from_pandas(chunk_sorted.to_pandas(), schema=schema)
+        writer.write_table(table)
+
+        logger.info(f"Written sorted chunk {
+                    i // chunk_size + 1} to {output_path}")
+
+    if schema is not None:
+        writer.close()
+
+
 async def fetch_data(address, selected_network, network_url, request_type):
     client = hypersync.HypersyncClient(hypersync.ClientConfig(url=network_url))
 
@@ -105,81 +139,84 @@ async def fetch_data(address, selected_network, network_url, request_type):
     total_blocks = 0
     total_items = 0
 
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     is_cached = os.path.exists(file_path)
+
     if is_cached:
-        existing_df = pl.read_parquet(file_path)
-        last_block = existing_df['block_number'].max()
+        existing_df = pl.scan_parquet(file_path)
+        last_block = existing_df.select(
+            pl.col("block_number").max()).collect().item()
         start_block = int(last_block) + 1
-        print(f"Existing data found. Starting from block {start_block}")
+        logger.info(f"Existing data found. Starting from block {start_block}")
     else:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
         start_block = 0
         existing_df = None
-        print("No existing data found. Starting from block 0")
+        logger.info("No existing data found. Starting from block 0")
 
     query = create_query(address, start_block, request_type)
-
     config = hypersync.StreamConfig(
         hex_output=hypersync.HexOutput.PREFIXED,
         column_mapping=ColumnMapping(
-            log={
-                LogField.BLOCK_NUMBER: DataType.INT64,
-            },
-            transaction={
-                TransactionField.BLOCK_NUMBER: DataType.INT64,
-            },
+            log={LogField.BLOCK_NUMBER: DataType.INT64},
+            transaction={TransactionField.BLOCK_NUMBER: DataType.INT64},
         ),
     )
 
     new_directory = f"{directory}_temp"
     try:
-        print(f"Attempting to collect new data from block {start_block}")
+        logger.info(f"Attempting to collect new data from block {start_block}")
         await client.collect_parquet(new_directory, query, config)
-        print("Finished writing new parquet folder")
+        logger.info("Finished writing new parquet folder")
 
         new_file_path = f'{new_directory}/{file_suffix}.parquet'
         if not os.path.exists(new_file_path):
-            print("No new data found.")
+            logger.warning("No new data found.")
             if existing_df is not None:
-                print("Using existing data as no new data was found")
-                combined_df = existing_df
+                logger.info("Using existing data as no new data was found")
+                combined_df = existing_df.collect()
             else:
                 raise ValueError("No existing data and no new data found.")
         else:
-            new_df = pl.read_parquet(new_file_path)
-            print(f"New data fetched: {len(new_df)} rows")
+            sorted_file_path = f"{directory}/sorted_{file_suffix}.parquet"
+            process_and_write_in_chunks(new_file_path, sorted_file_path)
 
             if existing_df is not None:
-                # Check if the schemas match
-                if set(existing_df.columns) != set(new_df.columns):
-                    print(
-                        "Warning: Schema mismatch. Using only existing data. Likely change in HyperSync request not compatible with cached data")
-                    combined_df = existing_df
-                else:
-                    combined_df = pl.concat([existing_df, new_df])
-                    print(f"Combined data: {len(combined_df)} rows")
+                # Merge existing and new data
+                combined_df = pl.concat(
+                    [existing_df.collect(), pl.read_parquet(sorted_file_path)])
+                combined_df.sort("block_number").write_parquet(file_path)
             else:
-                combined_df = new_df
+                # Just rename the sorted file to the final file name
+                os.rename(sorted_file_path, file_path)
 
-        combined_df = combined_df.sort("block_number")
-        combined_df.write_parquet(file_path)
-        print(f"Updated parquet file written to {file_path}")
+        # Calculate statistics
+        final_df = pl.scan_parquet(file_path)
+        stats = final_df.select([
+            pl.col("block_number").min().alias("min_block"),
+            pl.col("block_number").max().alias("max_block"),
+            pl.count().alias("total_items")
+        ]).collect()
 
-        total_blocks = combined_df['block_number'].max(
-        ) - combined_df['block_number'].min() + 1
-        total_items = len(combined_df)
-        print(f"Total blocks: {total_blocks}, Total events: {total_items}")
+        total_blocks = stats["max_block"][0] - stats["min_block"][0] + 1
+        total_items = stats["total_items"][0]
+        logger.info(f"Total blocks: {
+                    total_blocks}, Total items: {total_items}")
 
     except Exception as e:
-        print(f"Error during data collection: {str(e)}")
+        logger.error(f"Error during data collection: {str(e)}", exc_info=True)
         if existing_df is not None:
-            print("Using existing data due to error in fetching new data")
-            total_blocks = existing_df['block_number'].max(
-            ) - existing_df['block_number'].min() + 1
-            total_items = len(existing_df)
+            logger.info(
+                "Using existing data due to error in fetching new data")
+            stats = existing_df.select([
+                pl.col("block_number").min().alias("min_block"),
+                pl.col("block_number").max().alias("max_block"),
+                pl.count().alias("total_items")
+            ]).collect()
+            total_blocks = stats["max_block"][0] - stats["min_block"][0] + 1
+            total_items = stats["total_items"][0]
         else:
-            print("No data available")
+            logger.warning("No data available")
             total_blocks = 0
             total_items = 0
 
@@ -192,12 +229,19 @@ async def fetch_data(address, selected_network, network_url, request_type):
 
 
 def analyze_data(directory, request_type):
-    if request_type == "event":
-        df = pl.read_parquet(f"{directory}/logs.parquet")
-    else:
-        df = pl.read_parquet(f"{directory}/transactions.parquet")
+    logger.info(f"Starting analyze_data function for {request_type}")
+    file_path = f"{directory}/{'logs' if request_type ==
+                               'event' else 'transactions'}.parquet"
+    logger.info(f"Attempting to read Parquet file: {file_path}")
 
-    return df.to_pandas()
+    try:
+        df = pl.read_parquet(file_path)
+        logger.info(f"Successfully read Parquet file. Shape: {df.shape}")
+        return df
+    except Exception as e:
+        logger.error(f"Error reading or processing Parquet file: {
+                     str(e)}", exc_info=True)
+        raise
 
 
 def format_with_commas(value):
@@ -226,68 +270,169 @@ def round_based_on_magnitude(number):
         return round(number / 100000) * 100000
 
 
-def create_plot(directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached):
-    plt.figure(figsize=(15, 7))  # Width, Height in inches
+def log_memory_usage():
+    process = psutil.Process(os.getpid())
+    memory_info = process.memory_info()
+    logger.info(f"Memory usage: {memory_info.rss / 1024 / 1024:.2f} MB")
 
-    # Determine if this is an event request and read the appropriate parquet file
+
+def signal_handler(signum, frame):
+    logger.error(f"Received signal {signum}. Exiting.")
+    log_memory_usage()
+    exit(1)
+
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
+
+def create_plot(directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached):
+    logger.info("Starting create_plot function")
+    plt.figure(figsize=(15, 7))
+    logger.info("Created figure with size (15, 7)")
+
     is_event_request = request_type == "event"
     file_suffix = 'logs' if is_event_request else 'transactions'
-    df = analyze_data(directory, request_type)
+    logger.info(f"Request type: {request_type}, file_suffix: {file_suffix}")
 
-    # Define the interval size
+    logger.info(f"Analyzing data from directory: {directory}")
+    try:
+        logger.info(f"Attempting to read file: {
+                    directory}/{file_suffix}.parquet")
+        df = pl.read_parquet(f"{directory}/{file_suffix}.parquet")
+        logger.info(f"Data read successfully, DataFrame shape: {df.shape}")
+    except Exception as e:
+        logger.error(f"Error reading Parquet file: {str(e)}", exc_info=True)
+        raise
+
     min_block = df['block_number'].min()
     max_block = df['block_number'].max()
+    logger.info(f"Min block: {min_block}, Max block: {max_block}")
+
     interval_size = max(5000, round_based_on_magnitude(
         (max_block - min_block) / 50))
+    logger.info(f"Calculated interval size: {interval_size}")
+
     min_block_rounded = min_block - (min_block % interval_size)
-    intervals = range(int(min_block_rounded), int(
-        max_block) + interval_size, interval_size)
-    df['interval'] = pd.cut(df['block_number'], bins=intervals)
+    intervals = np.arange(min_block_rounded, max_block +
+                          interval_size, interval_size)
+    logger.info(f"Created intervals, first: {
+                intervals[0]}, last: {intervals[-1]}")
 
-    # Generate x labels for the intervals
-    x_labels = [f"{format_with_commas(left)}-{format_with_commas(right)}"
-                for left, right in zip(intervals[:-1], intervals[1:])]
+    logger.info("Calculating interval counts")
+    log_memory_usage()
 
-    interval_counts = df['interval'].value_counts().sort_index()
-    ax = interval_counts.plot(kind='bar', color='lightblue', edgecolor='black')
+    try:
+        chunk_size = 1_000_000  # Adjust this value based on your available memory
+        interval_counts = None
+
+        for chunk in df.iter_slices(chunk_size):
+            logger.info(f"Processing chunk of size {len(chunk)}")
+            chunk = chunk.with_columns([
+                ((pl.col('block_number') - min_block_rounded) /
+                 interval_size).floor().cast(pl.Int64).alias('interval_index')
+            ])
+            chunk_counts = chunk.group_by(
+                'interval_index').agg(pl.len().alias('count'))
+
+            if interval_counts is None:
+                interval_counts = chunk_counts
+            else:
+                interval_counts = pl.concat([interval_counts, chunk_counts])
+
+            log_memory_usage()
+
+        interval_counts = interval_counts.group_by(
+            'interval_index').agg(pl.sum('count')).sort('interval_index')
+        logger.info(f"Grouped by interval_index, shape: {
+                    interval_counts.shape}")
+
+        interval_counts = interval_counts.with_columns([
+            (pl.col('interval_index') * interval_size +
+             min_block_rounded).alias('interval_start'),
+            ((pl.col('interval_index') + 1) * interval_size +
+             min_block_rounded).alias('interval_end')
+        ])
+        logger.info(f"Added interval boundaries, final shape: {
+                    interval_counts.shape}")
+        logger.info(f"First few rows of interval_counts:\n{
+                    interval_counts.head()}")
+        log_memory_usage()
+
+    except Exception as e:
+        logger.error(f"Error during interval count calculation: {
+                     str(e)}", exc_info=True)
+        log_memory_usage()
+        raise
+
+    # Convert to pandas for plotting
+    try:
+        interval_counts_pd = interval_counts.to_pandas()
+        interval_counts_pd['interval'] = interval_counts_pd.apply(
+            lambda row: f"{row['interval_start']}-{row['interval_end']}", axis=1)
+        interval_counts_pd.set_index('interval', inplace=True)
+        logger.info(f"Converted to pandas DataFrame, shape: {
+                    interval_counts_pd.shape}")
+        log_memory_usage()
+    except Exception as e:
+        logger.error(f"Error converting to pandas: {str(e)}", exc_info=True)
+        log_memory_usage()
+        raise
+
+    logger.info("Plotting bar chart")
+    ax = interval_counts_pd['count'].plot(
+        kind='bar', color='lightblue', edgecolor='black')
 
     ylabel = 'Number of Events' if is_event_request else 'Number of Transactions'
     title = (f'Number of Events per Block Interval (Size {interval_size})'
              if is_event_request
              else f'Number of Transactions per Block Interval (Size {interval_size})')
 
+    logger.info(f"Setting labels and title. Y-label: {ylabel}")
     plt.xlabel('Block Number Interval')
     plt.ylabel(ylabel)
     plt.title(title)
+
+    logger.info("Setting x-axis ticks and labels")
+    x_labels = [f"{format_with_commas(int(left))}-{format_with_commas(int(right))}"
+                for left, right in zip(intervals[:-1], intervals[1:])]
     plt.xticks(ticks=range(len(x_labels)),
                labels=x_labels, rotation=45, ha='right')
 
-    # Format the y-axis to show numbers with commas and create a secondary axis
+    logger.info("Formatting y-axis with commas")
     ax.get_yaxis().set_major_formatter(
         ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
+
+    logger.info("Creating secondary y-axis")
     ax2 = ax.twinx()
-    ax2.plot(range(len(interval_counts)), interval_counts.cumsum(),
+    logger.info("Plotting cumulative sum on secondary y-axis")
+    ax2.plot(range(len(interval_counts_pd)), interval_counts_pd['count'].cumsum(),
              color='red', marker='o', linestyle='-')
     ax2.set_ylabel('Cumulative Total', color='red')
     ax2.tick_params(axis='y', colors='red')
     ax2.get_yaxis().set_major_formatter(
         ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
 
+    logger.info("Adjusting layout")
     plt.tight_layout()
 
-    # Save the plot to a BytesIO buffer
+    logger.info("Saving plot to BytesIO buffer")
     buf = io.BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight')
     buf.seek(0)
     plot_url = base64.b64encode(buf.read()).decode('utf-8')
     buf.close()
+    logger.info("Plot saved and encoded")
 
     is_event = request_type == "event"
     item_type = "Events" if is_event else "Transactions"
+    logger.info(f"Item type: {item_type}")
 
     if start_block == 0:
         total_blocks = max(total_blocks, df['block_number'].max())
+    logger.info(f"Total blocks: {total_blocks}")
 
+    logger.info("Preparing stats dictionary")
     stats = {
         'total_blocks': format_with_commas(total_blocks),
         'total_items': format_with_commas(total_items),
@@ -297,7 +442,9 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
         'is_event': is_event,
         'is_cached': is_cached
     }
+    logger.info("Stats dictionary created")
 
+    logger.info("create_plot function completed")
     return f'data:image/png;base64,{plot_url}', stats
 
 

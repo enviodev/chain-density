@@ -5,3 +5,4 @@ matplotlib
 pyarrow
 polars
 aiohttp
+psutil
