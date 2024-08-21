@@ -317,7 +317,7 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
     intervals = np.arange(min_block_rounded, max_block +
                           interval_size, interval_size)
     logger.info(f"Created intervals, first: {
-                intervals[0]}, last: {intervals[-1]}")
+                intervals[0]}, last: {intervals[-1]}, total intervals: {len(intervals)}")
 
     logger.info("Calculating interval counts")
     log_memory_usage()
@@ -335,6 +335,9 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
             chunk_counts = chunk.group_by(
                 'interval_index').agg(pl.len().alias('count'))
 
+            logger.info(f"Chunk interval indices: min={
+                        chunk_counts['interval_index'].min()}, max={chunk_counts['interval_index'].max()}")
+
             if interval_counts is None:
                 interval_counts = chunk_counts
             else:
@@ -346,6 +349,13 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
             'interval_index').agg(pl.sum('count')).sort('interval_index')
         logger.info(f"Grouped by interval_index, shape: {
                     interval_counts.shape}")
+        logger.info(f"Interval indices: min={interval_counts['interval_index'].min()}, max={
+                    interval_counts['interval_index'].max()}")
+
+        full_range = pl.DataFrame(
+            {'interval_index': pl.arange(0, len(intervals)-1, eager=True)})
+        interval_counts = full_range.join(
+            interval_counts, on='interval_index', how='left').fill_null(0)
 
         interval_counts = interval_counts.with_columns([
             (pl.col('interval_index') * interval_size +
@@ -357,6 +367,8 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
                     interval_counts.shape}")
         logger.info(f"First few rows of interval_counts:\n{
                     interval_counts.head()}")
+        logger.info(f"Last few rows of interval_counts:\n{
+                    interval_counts.tail()}")
         log_memory_usage()
 
     except Exception as e:
