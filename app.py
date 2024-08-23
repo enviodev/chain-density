@@ -29,15 +29,22 @@ logger = logging.getLogger(__name__)
 
 
 async def fetch_chain_data():
+    # Get the full domain for Hyperquery chains from environment variable, with a default value
+    hyperquery_chains_domain = os.environ.get(
+        'HYPERQUERY_CHAINS_DOMAIN', 'chains.hyperquery.xyz')
+
     async with aiohttp.ClientSession() as session:
-        async with session.get('https://chains.hyperquery.xyz/active_chains') as response:
+        async with session.get(f'https://{hyperquery_chains_domain}/active_chains') as response:
             data = await response.json()
+
+    # Get the base domain for Hypersync from environment variable, with a default value
+    hypersync_domain = os.environ.get('HYPERSYNC_DOMAIN', 'hypersync.xyz')
 
     chain_data = {}
     for chain in data:
         chain_data[chain['name']] = {
             'chain_id': chain['chain_id'],
-            'url': f"https://{chain['name']}.hypersync.xyz"
+            'url': f"https://{chain['name']}.{hypersync_domain}"
         }
     return chain_data
 
