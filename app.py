@@ -37,7 +37,7 @@ async def fetch_chain_data():
     protocol = 'https' if hyperquery_chains_domain == 'chains.hyperquery.xyz' else 'http'
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(f'{protocol}://{hyperquery_chains_domain}/active_chains') as response:
+        async with session.get(f'{protocol}://{hyperquery_chains_domain}/active_chains?ecosystem=evm') as response:
             data = await response.json()
 
     # Get the base domain for Hypersync from environment variable, with a default value
