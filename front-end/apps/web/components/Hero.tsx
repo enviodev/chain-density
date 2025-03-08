@@ -1,4 +1,45 @@
+import { useEffect, useState } from "react";
+import NetworkCarousel from "./NetworkCarousel";
+
 export default function Hero() {
+  const [networks, setNetworks] = useState<string[]>([]);
+
+  // Fetch available networks
+  useEffect(() => {
+    const fetchNetworks = async () => {
+      try {
+        const response = await fetch("http://localhost:5001/api/networks");
+        const data = await response.json();
+        if (data.networks && Array.isArray(data.networks)) {
+          // Filter out any non-string values
+          const validNetworks = data.networks.filter(
+            (network: any): network is string => typeof network === "string"
+          );
+          setNetworks(validNetworks);
+        }
+      } catch (error) {
+        console.error("Error fetching networks for carousel:", error);
+        // Use fallback networks if API fails
+        setNetworks([
+          "ethereum",
+          "optimism",
+          "arbitrum",
+          "polygon",
+          "avalanche",
+          "base",
+          "bsc",
+          "fantom",
+          "gnosis",
+          "celo",
+          "moonbeam",
+          "unichain",
+        ]);
+      }
+    };
+
+    fetchNetworks();
+  }, []);
+
   return (
     <div className="relative min-h-[80vh] bg-gray-50 overflow-hidden flex items-center">
       <div className="absolute inset-0">
@@ -36,34 +77,18 @@ export default function Hero() {
             </span>
           </h1>
 
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8 animate-slideUp animation-delay-300">
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-4 animate-slideUp animation-delay-300">
             Analyze and visualize event and transaction density for any address
             across 60+ chains. Useful for trends and understanding indexing
             efforts.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-600 animate-fadeIn animation-delay-500">
-            <span className="px-3 py-1 bg-white rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-              Ethereum
-            </span>
-            <span className="px-3 py-1 bg-white rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-              Optimism
-            </span>
-            <span className="px-3 py-1 bg-white rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-              Arbitrum
-            </span>
-            <span className="px-3 py-1 bg-white rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-              Polygon
-            </span>
-            <span className="px-3 py-1 bg-white rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-              Avalanche
-            </span>
-            <span className="px-3 py-1 bg-white rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-              + More
-            </span>
+          {/* Network Carousel - reduced margin */}
+          <div className="animate-fadeIn animation-delay-500">
+            <NetworkCarousel networks={networks} />
           </div>
 
-          <div className="mt-12 animate-bounce animation-delay-700">
+          <div className="mt-8 animate-bounce animation-delay-700">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-6 w-6 mx-auto text-gray-400"

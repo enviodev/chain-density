@@ -46,6 +46,9 @@ module.exports = {
         fadeIn: "fadeIn 1s ease-in-out",
         slideUp: "slideUp 0.6s ease-in-out",
         slideDown: "slideDown 0.6s ease-in-out",
+        carousel: "carousel 30s linear infinite",
+        pulse3d: "pulse3d 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        float: "float 3s ease-in-out infinite",
       },
       keyframes: {
         blob: {
@@ -74,6 +77,26 @@ module.exports = {
           "0%": { transform: "translateY(-20px)", opacity: "0" },
           "100%": { transform: "translateY(0)", opacity: "1" },
         },
+        carousel: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(calc(-50% - 0.75rem))" },
+        },
+        pulse3d: {
+          "0%, 100%": {
+            transform: "scale3d(1, 1, 1)",
+            boxShadow:
+              "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+          },
+          "50%": {
+            transform: "scale3d(1.05, 1.05, 1.05)",
+            boxShadow:
+              "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+          },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
       },
     },
   },
@@ -100,6 +123,18 @@ module.exports = {
         },
         ".animation-delay-700": {
           "animation-delay": "700ms",
+        },
+        ".animation-duration-slow": {
+          "animation-duration": "3s",
+        },
+        ".animation-duration-slower": {
+          "animation-duration": "5s",
+        },
+        ".animation-play-state-paused": {
+          "animation-play-state": "paused",
+        },
+        ".animation-play-state-running": {
+          "animation-play-state": "running",
         },
       });
     },
