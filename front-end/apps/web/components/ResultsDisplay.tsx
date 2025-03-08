@@ -11,9 +11,13 @@ interface ResultsDisplayProps {
     total_items: number;
     elapsed_time: number;
   };
+  onClear: () => void;
 }
 
-export default function ResultsDisplay({ result }: ResultsDisplayProps) {
+export default function ResultsDisplay({
+  result,
+  onClear,
+}: ResultsDisplayProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   return (
@@ -60,9 +64,35 @@ export default function ResultsDisplay({ result }: ResultsDisplayProps) {
       )}
 
       {/* Main Content */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 relative">
+        {/* Clear button */}
+        <button
+          onClick={onClear}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-colors z-10 group"
+          aria-label="Clear results"
+          title="Clear results"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+          <span className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            Clear results
+          </span>
+        </button>
+
         <div className="p-6 border-b border-gray-100">
-          <div className="flex flex-col md:flex-row justify-between md:items-center gap-2">
+          <div className="flex flex-col md:flex-row justify-between md:items-center gap-2 pr-10">
             <div>
               <h2 className="text-xl font-semibold">
                 {result.request_type === "event" ? "Event" : "Transaction"}{" "}
@@ -79,7 +109,7 @@ export default function ResultsDisplay({ result }: ResultsDisplayProps) {
                 </span>
               </p>
             </div>
-            <div className="text-xs bg-gray-100 px-3 py-1.5 rounded-full text-gray-600">
+            <div className="text-xs bg-gray-100 px-3 py-1.5 rounded-full text-gray-600 md:mr-8">
               Completed in {result.elapsed_time.toFixed(2)}s
             </div>
           </div>

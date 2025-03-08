@@ -1,4 +1,44 @@
+import { useState, useEffect } from "react";
+
 export default function LoadingState() {
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [progressWidth, setProgressWidth] = useState(15);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Array of informative messages that will rotate
+  const loadingMessages = [
+    "We're retrieving and processing blockchain data. This may take a moment...",
+    "Generally, retrieving one million events can take around 5 seconds, but it depends on the chain and address density.",
+    "Addresses with high activity (like DEXes or bridges) may take longer to analyze due to the volume of data.",
+    "We're using Hypersync to efficiently query blockchain data across 60+ chains.",
+    "The visualization will show you patterns in blockchain activity over time.",
+    "Different chains have different block times, which affects how long this analysis takes.",
+    "We're analyzing historical data to identify trends and patterns in blockchain activity.",
+    "This tool is useful for understanding indexing efforts and activity density.",
+  ];
+
+  // Update the message every 5 seconds
+  useEffect(() => {
+    const messageInterval = setInterval(() => {
+      setMessageIndex((prevIndex) => (prevIndex + 1) % loadingMessages.length);
+    }, 5000);
+
+    // Update progress bar and elapsed time
+    const progressInterval = setInterval(() => {
+      setElapsedTime((prev) => prev + 1);
+      setProgressWidth((prev) => {
+        // Gradually increase width but slow down over time
+        const increment = Math.max(1, 5 - Math.floor(prev / 20));
+        return Math.min(prev + increment, 85);
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(messageInterval);
+      clearInterval(progressInterval);
+    };
+  }, []);
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <div className="flex flex-col items-center justify-center py-12">
@@ -12,10 +52,22 @@ export default function LoadingState() {
           <h3 className="text-lg font-medium text-gray-900">
             Analyzing Chain Data
           </h3>
-          <p className="mt-2 text-sm text-gray-500">
-            We're retrieving and processing blockchain data. This may take a
-            moment...
-          </p>
+          <div className="h-16 mt-2">
+            <p className="text-sm text-gray-500 animate-fadeIn">
+              {loadingMessages[messageIndex]}
+            </p>
+          </div>
+          <div className="text-xs text-gray-400 mt-1">
+            Time elapsed: {elapsedTime}s
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mt-6 w-full max-w-md bg-gray-200 rounded-full h-2.5">
+          <div
+            className="bg-gradient-to-r from-envio-500 to-orange-500 h-2.5 rounded-full transition-all duration-1000 ease-out"
+            style={{ width: `${progressWidth}%` }}
+          ></div>
         </div>
 
         <div className="mt-8 w-full max-w-md">

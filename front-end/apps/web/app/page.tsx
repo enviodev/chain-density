@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
@@ -14,6 +14,9 @@ export default function ChainDensity() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef<HTMLDivElement>(null);
 
   // Fetch available networks on component mount
   useEffect(() => {
@@ -40,6 +43,13 @@ export default function ChainDensity() {
     setError("");
     setResult(null);
 
+    // Immediately scroll to loading state
+    setTimeout(() => {
+      if (loadingRef.current) {
+        loadingRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 100);
+
     try {
       const response = await fetch("http://localhost:5001/api/data", {
         method: "POST",
@@ -60,6 +70,13 @@ export default function ChainDensity() {
       }
 
       setResult(data);
+
+      // Scroll to results after they're loaded
+      setTimeout(() => {
+        if (resultsRef.current) {
+          resultsRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 100);
     } catch (error: any) {
       console.error("Error:", error);
       setError(error.message || "An unexpected error occurred");
@@ -68,33 +85,57 @@ export default function ChainDensity() {
     }
   };
 
+  const clearResults = () => {
+    setResult(null);
+    setError("");
+
+    // Scroll back to hero section
+    setTimeout(() => {
+      if (heroRef.current) {
+        heroRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 100);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
 
       <main className="flex-grow">
-        <Hero />
+        {/* Full-screen hero section */}
+        <section
+          ref={heroRef}
+          className="min-h-screen flex flex-col justify-center"
+        >
+          <Hero />
 
-        <section className="py-16">
+          {/* Centered analysis form */}
+          <div className="container mx-auto px-4 -mt-16 sm:-mt-24 md:-mt-32 relative z-20 mb-16">
+            <div className="max-w-xl mx-auto transform transition-all duration-500 ease-in-out hover:scale-[1.01]">
+              <AnalysisForm
+                networks={networks}
+                onSubmit={handleAnalysisSubmit}
+                loading={loading}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Results section */}
+        <section ref={resultsRef} className="py-8 md:py-16">
           <div className="container mx-auto px-4">
-            <div className="max-w-[1400px] mx-auto">
-              <div className="grid md:grid-cols-[1fr_3fr] gap-8">
-                <div>
-                  <AnalysisForm
-                    networks={networks}
-                    onSubmit={handleAnalysisSubmit}
-                    loading={loading}
-                  />
+            <div className="max-w-[1200px] mx-auto">
+              {error && <ErrorDisplay message={error} />}
+              {loading && (
+                <div ref={loadingRef} className="animate-fadeIn">
+                  <LoadingState />
                 </div>
-
-                <div>
-                  {error && <ErrorDisplay message={error} />}
-                  {loading && <LoadingState />}
-                  {!loading && !error && result && (
-                    <ResultsDisplay result={result} />
-                  )}
+              )}
+              {!loading && !error && result && (
+                <div className="animate-slideUp">
+                  <ResultsDisplay result={result} onClear={clearResults} />
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </section>

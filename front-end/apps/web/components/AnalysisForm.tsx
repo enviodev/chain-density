@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface AnalysisFormProps {
   networks: string[];
@@ -12,47 +12,50 @@ export default function AnalysisForm({
   loading,
 }: AnalysisFormProps) {
   const [address, setAddress] = useState("");
-  const [requestType, setRequestType] = useState("transaction");
-  const [network, setNetwork] = useState("");
+  const [requestType, setRequestType] = useState("event");
+  const [network, setNetwork] = useState("ethereum");
 
-  useEffect(() => {
-    if (networks.length > 0 && !network) {
-      setNetwork(networks[0] || "");
-    }
-  }, [networks, network]);
+  // Example addresses for quick testing
+  const exampleAddresses = [
+    {
+      address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+      type: "event",
+      name: "Uniswap V2 Router",
+      network: "ethereum",
+    },
+    {
+      address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+      type: "transaction",
+      name: "Uniswap V3 Router",
+      network: "ethereum",
+    },
+    {
+      address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      type: "event",
+      name: "WETH",
+      network: "ethereum",
+    },
+    {
+      address: "0x1f98400000000000000000000000000000000004",
+      type: "event",
+      name: "Uniswap V4 Pool Manager",
+      network: "unichain",
+    },
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (network) {
-      onSubmit(address, requestType, network);
-    }
+    onSubmit(address, requestType, network);
   };
-
-  const exampleAddresses = [
-    {
-      name: "Blast L2 Bridge",
-      address: "0x4d3f5e1d563cd5cc6fbfd3ed6707593d87f5e550",
-      type: "event",
-    },
-    {
-      name: "OP Token",
-      address: "0x4200000000000000000000000000000000000042",
-      type: "transaction",
-    },
-    {
-      name: "Fren Pet",
-      address: "0x7c22c04d02b120eadeefde6de6a710c57ad59f0c",
-      type: "event",
-    },
-  ];
 
   const handleExampleClick = (example: (typeof exampleAddresses)[number]) => {
     setAddress(example.address);
     setRequestType(example.type);
+    setNetwork(example.network);
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="bg-white rounded-xl shadow-md border border-gray-100 transition-all duration-300 hover:shadow-lg">
       <div className="p-6">
         <h2 className="text-xl font-semibold mb-1">Analysis Parameters</h2>
         <p className="text-sm text-gray-500 mb-6">
@@ -65,7 +68,7 @@ export default function AnalysisForm({
               htmlFor="address"
               className="block text-sm font-medium text-gray-700"
             >
-              Contract Address
+              Address
             </label>
             <input
               id="address"
@@ -87,25 +90,63 @@ export default function AnalysisForm({
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  requestType === "transaction"
-                    ? "bg-orange-50 text-orange-700 border border-orange-100"
-                    : "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
+                className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                  requestType === "event"
+                    ? "bg-envio-100 border-envio-300 text-envio-800 shadow-sm scale-[1.02]"
+                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
                 }`}
-                onClick={() => setRequestType("transaction")}
+                onClick={() => setRequestType("event")}
+                aria-pressed={requestType === "event"}
               >
-                Transaction
+                <div className="flex items-center justify-center space-x-2">
+                  {requestType === "event" && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 text-envio-700"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                  <span>Events</span>
+                </div>
               </button>
               <button
                 type="button"
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  requestType === "event"
-                    ? "bg-orange-50 text-orange-700 border border-orange-100"
-                    : "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
+                className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                  requestType === "transaction"
+                    ? "bg-envio-100 border-envio-300 text-envio-800 shadow-sm scale-[1.02]"
+                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
                 }`}
-                onClick={() => setRequestType("event")}
+                onClick={() => setRequestType("transaction")}
+                aria-pressed={requestType === "transaction"}
               >
-                Event
+                <div className="flex items-center justify-center space-x-2">
+                  {requestType === "transaction" && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 text-envio-700"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                  <span>Transactions</span>
+                </div>
               </button>
             </div>
           </div>
@@ -122,64 +163,45 @@ export default function AnalysisForm({
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-envio-500 focus:border-envio-500 transition-colors"
               value={network}
               onChange={(e) => setNetwork(e.target.value)}
+              required
             >
-              {networks.map((net) => (
-                <option key={net} value={net}>
-                  {net}
-                </option>
-              ))}
+              {networks.length === 0 ? (
+                <option value="">Loading networks...</option>
+              ) : (
+                networks.map((net) => (
+                  <option key={net} value={net}>
+                    {net.charAt(0).toUpperCase() + net.slice(1)}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
-          {/* Professional Button with Subtle Styling */}
-          <div className="mt-4">
+          <div className="pt-2">
             <button
               type="submit"
-              style={{
-                backgroundColor: "#f97316", // More subtle orange
-                color: "white",
-                padding: "12px 16px",
-                borderRadius: "8px",
-                fontWeight: "600",
-                width: "100%",
-                fontSize: "15px",
-                border: "none",
-                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                transition: "all 0.2s ease",
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.7 : 1,
-              }}
-              onMouseOver={(e) =>
-                (e.currentTarget.style.backgroundColor = "#ea580c")
-              }
-              onMouseOut={(e) =>
-                (e.currentTarget.style.backgroundColor = "#f97316")
-              }
-              disabled={loading}
+              className="w-full bg-gradient-to-r from-envio-500 to-orange-600 text-white py-2.5 px-4 rounded-lg font-medium hover:from-envio-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-envio-500 focus:ring-offset-2 transition-colors disabled:opacity-70 disabled:cursor-not-allowed transform transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              disabled={loading || networks.length === 0}
             >
-              {loading ? "Analyzing..." : "Generate Visualization"}
+              {loading ? "Generating..." : "Generate Visualization"}
             </button>
           </div>
         </form>
-      </div>
 
-      <div className="border-t border-gray-100 bg-gray-50 p-4 rounded-b-xl">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">
-          Example Searches
-        </h3>
-        <div className="grid gap-2">
-          {exampleAddresses.map((example, index) => (
-            <button
-              key={index}
-              onClick={() => handleExampleClick(example)}
-              className="flex justify-between items-center p-2 text-left text-sm rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <span className="font-medium text-gray-900">{example.name}</span>
-              <span className="text-xs bg-gray-200 px-2 py-1 rounded-full">
-                {example.type}
-              </span>
-            </button>
-          ))}
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <p className="text-xs text-gray-500 mb-3">Quick examples:</p>
+          <div className="flex flex-wrap gap-2">
+            {exampleAddresses.map((example, index) => (
+              <button
+                key={index}
+                onClick={() => handleExampleClick(example)}
+                className="text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-700 transition-colors"
+                type="button"
+              >
+                {example.name}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
