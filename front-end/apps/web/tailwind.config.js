@@ -5,12 +5,73 @@ module.exports = {
     extend: {
       colors: {
         orange: {
-          500: "#ff5722",
-          600: "#e64a19",
-          700: "#d84315",
+          50: "#fff7ed",
+          100: "#ffedd5",
+          200: "#fed7aa",
+          300: "#fdba74",
+          400: "#fb923c",
+          500: "#f97316",
+          600: "#ea580c",
+          700: "#c2410c",
+          800: "#9a3412",
+          900: "#7c2d12",
+        },
+        blue: {
+          50: "#f0f7ff",
+          100: "#e0efff",
+          200: "#bae0ff",
+          300: "#7cc6ff",
+          400: "#36a9ff",
+          500: "#0090ff",
+          600: "#0072e6",
+          700: "#0059b3",
+          800: "#004a99",
+          900: "#003F80",
+        },
+        envio: {
+          50: "#fff5f2",
+          100: "#ffe6e0",
+          200: "#ffc2b3",
+          300: "#ff9e85",
+          400: "#ff7a57",
+          500: "#ff6347",
+          600: "#e54c34",
+          700: "#cc3d29",
+          800: "#a32f1f",
+          900: "#7a2115",
+        },
+      },
+      animation: {
+        blob: "blob 7s infinite",
+      },
+      keyframes: {
+        blob: {
+          "0%": {
+            transform: "translate(0px, 0px) scale(1)",
+          },
+          "33%": {
+            transform: "translate(30px, -50px) scale(1.1)",
+          },
+          "66%": {
+            transform: "translate(-20px, 20px) scale(0.9)",
+          },
+          "100%": {
+            transform: "translate(0px, 0px) scale(1)",
+          },
         },
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function ({ addUtilities, addComponents, addBase, theme }) {
+      addUtilities({
+        ".animation-delay-2000": {
+          "animation-delay": "2s",
+        },
+        ".animation-delay-4000": {
+          "animation-delay": "4s",
+        },
+      });
+    },
+  ],
 };
