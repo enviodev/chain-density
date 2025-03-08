@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface AnalysisFormProps {
   networks: string[];
@@ -13,35 +13,54 @@ export default function AnalysisForm({
 }: AnalysisFormProps) {
   const [address, setAddress] = useState("");
   const [requestType, setRequestType] = useState("event");
-  const [network, setNetwork] = useState("ethereum");
+  const [network, setNetwork] = useState("");
 
   // Example addresses for quick testing
   const exampleAddresses = [
-    {
-      address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-      type: "event",
-      name: "Uniswap V2 Router",
-      network: "ethereum",
-    },
-    {
-      address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
-      type: "transaction",
-      name: "Uniswap V3 Router",
-      network: "ethereum",
-    },
-    {
-      address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-      type: "event",
-      name: "WETH",
-      network: "ethereum",
-    },
     {
       address: "0x1f98400000000000000000000000000000000004",
       type: "event",
       name: "Uniswap V4 Pool Manager",
       network: "unichain",
     },
+    {
+      address: "0x4200000000000000000000000000000000000042",
+      type: "transaction",
+      name: "OP Token",
+      network: "optimism",
+    },
+    {
+      address: "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+      type: "event",
+      name: "Ethena Mint/Redeem V2",
+      network: "ethereum",
+    },
+    {
+      address: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+      type: "event",
+      name: "EigenLayer Strategy Manager",
+      network: "ethereum",
+    },
   ];
+
+  // Set initial network when networks are loaded
+  useEffect(() => {
+    if (networks.length > 0 && !network) {
+      // Default to ethereum if available, otherwise first network
+      const ethNetwork = networks.find(
+        (net) =>
+          net.toLowerCase() === "ethereum" ||
+          net.toLowerCase() === "eth" ||
+          net.toLowerCase() === "mainnet"
+      );
+
+      if (ethNetwork) {
+        setNetwork(ethNetwork.toLowerCase());
+      } else if (networks[0]) {
+        setNetwork(networks[0].toLowerCase());
+      }
+    }
+  }, [networks, network]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +70,39 @@ export default function AnalysisForm({
   const handleExampleClick = (example: (typeof exampleAddresses)[number]) => {
     setAddress(example.address);
     setRequestType(example.type);
-    setNetwork(example.network);
+
+    // Manual mapping for known network names
+    let targetNetwork = example.network.toLowerCase();
+
+    // Special case for ethereum - directly check against available networks
+    if (targetNetwork === "ethereum") {
+      // Look for any ethereum-like network in the list
+      const ethNetwork = networks.find(
+        (net) =>
+          net.toLowerCase() === "ethereum" ||
+          net.toLowerCase() === "eth" ||
+          net.toLowerCase() === "mainnet"
+      );
+
+      if (ethNetwork) {
+        targetNetwork = ethNetwork.toLowerCase();
+      }
+    }
+
+    // Set the network if it exists in the available networks
+    const networkExists = networks.some(
+      (net) => net.toLowerCase() === targetNetwork
+    );
+    if (networkExists) {
+      setNetwork(targetNetwork);
+    } else if (networks.length > 0 && networks[0]) {
+      console.warn(
+        `Network ${targetNetwork} not found in available networks. Using default.`
+      );
+      setNetwork(networks[0].toLowerCase());
+    } else {
+      setNetwork("");
+    }
   };
 
   return (
@@ -168,8 +219,8 @@ export default function AnalysisForm({
               {networks.length === 0 ? (
                 <option value="">Loading networks...</option>
               ) : (
-                networks.map((net) => (
-                  <option key={net} value={net}>
+                networks.map((net, index) => (
+                  <option key={index} value={net.toLowerCase()}>
                     {net.charAt(0).toUpperCase() + net.slice(1)}
                   </option>
                 ))

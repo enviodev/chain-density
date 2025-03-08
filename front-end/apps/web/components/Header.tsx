@@ -9,12 +9,12 @@ export default function Header() {
           <Link href="/" className="flex items-center gap-2">
             <img
               src="/static/densityImage2.png"
-              alt="ChainDensity Logo"
+              alt="Chain Density Logo"
               className="h-8 w-8"
             />
-            <span className="font-bold text-xl text-gray-900">
-              ChainDensity
-            </span>
+            <div className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-envio-500 to-orange-600">
+              Chain Density
+            </div>
           </Link>
         </div>
 
