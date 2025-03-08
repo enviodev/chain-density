@@ -42,7 +42,7 @@ export default function Hero() {
 
   return (
     <div className="relative min-h-[80vh] overflow-hidden flex items-center">
-      <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
+      <div className="container mx-auto px-4 py-12 md:py-24 relative z-10">
         <div className="text-center max-w-3xl mx-auto animate-fadeIn">
           <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100/90 text-orange-800 border border-orange-200/70 shadow-sm mb-5 animate-pulse">
             <svg
@@ -55,14 +55,14 @@ export default function Hero() {
             Powered by Hypersync
           </div>
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-6 animate-slideUp">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-4 sm:mb-6 animate-slideUp">
             Visualize Blockchain
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-envio-500 to-orange-600">
               {" Activity Density"}
             </span>
           </h1>
 
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-4 animate-slideUp animation-delay-300">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-4 animate-slideUp animation-delay-300">
             Analyze and visualize event and transaction density for any address
             across 60+ chains. Useful for trends and understanding indexing
             efforts.

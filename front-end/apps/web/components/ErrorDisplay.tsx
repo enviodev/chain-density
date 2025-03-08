@@ -4,7 +4,7 @@ interface ErrorDisplayProps {
 
 export default function ErrorDisplay({ message }: ErrorDisplayProps) {
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-red-100/50 overflow-hidden">
+    <div className="bg-white/90 rounded-xl shadow-sm border border-red-100/50 overflow-hidden">
       <div className="bg-red-50/90 p-4 border-b border-red-100/50">
         <div className="flex items-center">
           <div className="flex-shrink-0">

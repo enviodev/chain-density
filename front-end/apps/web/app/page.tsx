@@ -126,7 +126,7 @@ export default function ChainDensity() {
           <Hero />
 
           {/* Centered analysis form */}
-          <div className="container mx-auto px-4 -mt-16 sm:-mt-24 md:-mt-32 relative z-20 mb-16">
+          <div className="container mx-auto px-4 -mt-8 sm:-mt-16 md:-mt-24 lg:-mt-32 relative z-20 mb-8 sm:mb-16">
             <div className="max-w-xl mx-auto transform transition-all duration-500 ease-in-out hover:scale-[1.01]">
               <AnalysisForm
                 networks={networks}
@@ -138,7 +138,7 @@ export default function ChainDensity() {
         </section>
 
         {/* Results section */}
-        <section ref={resultsRef} className="py-8 md:py-16 relative">
+        <section ref={resultsRef} className="py-4 sm:py-8 md:py-16 relative">
           <div className="container mx-auto px-4">
             <div className="max-w-[1200px] mx-auto">
               {error && <ErrorDisplay message={error} />}

@@ -106,7 +106,7 @@ export default function AnalysisForm({
   };
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-gray-100/50 transition-all duration-300 hover:shadow-lg">
+    <div className="bg-white/90 rounded-xl shadow-md border border-gray-100/50 transition-all duration-300 hover:shadow-lg">
       <div className="p-6">
         <h2 className="text-xl font-semibold mb-1">Get Started </h2>
         <p className="text-sm text-gray-500 mb-6">
