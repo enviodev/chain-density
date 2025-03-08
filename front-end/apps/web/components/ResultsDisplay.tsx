@@ -10,6 +10,7 @@ interface ResultsDisplayProps {
     total_blocks: number;
     total_items: number;
     elapsed_time: number;
+    cached?: boolean;
   };
   onClear: () => void;
 }
@@ -91,7 +92,7 @@ export default function ResultsDisplay({
           </span>
         </button>
 
-        <div className="p-6 border-b border-gray-100">
+        <div className="p-6 border-b border-gray-100/50">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-2 pr-10">
             <div>
               <h2 className="text-xl font-semibold">
@@ -109,8 +110,10 @@ export default function ResultsDisplay({
                 </span>
               </p>
             </div>
-            <div className="text-xs bg-gray-100 px-3 py-1.5 rounded-full text-gray-600 md:mr-8">
-              Completed in {result.elapsed_time.toFixed(2)}s
+            <div className="flex items-center gap-2 md:mr-8">
+              <div className="text-xs bg-gray-100/80 px-3 py-1.5 rounded-full text-gray-600">
+                Completed in {result.elapsed_time.toFixed(2)}s
+              </div>
             </div>
           </div>
         </div>
@@ -145,7 +148,7 @@ export default function ResultsDisplay({
                 </button>
               </div>
               <div
-                className="rounded-lg overflow-hidden border border-gray-100 bg-white hover:shadow-md transition-shadow cursor-pointer"
+                className="rounded-lg overflow-hidden border border-gray-100/50 bg-white/80 hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => setIsFullscreen(true)}
               >
                 <img
@@ -160,34 +163,64 @@ export default function ResultsDisplay({
             </div>
           )}
 
-          {/* Stats Section */}
+          {/* Stats Section - Improved Layout */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 mr-1 text-envio-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
               Analysis Results
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {/* Total Blocks Processed */}
               <StatsCard
-                title="Total Blocks"
+                title="Total Blocks Processed"
                 value={result.total_blocks.toLocaleString()}
-                description="Number of blocks analyzed"
+                icon="blocks"
               />
+
+              {/* Total Events/Transactions Processed */}
               <StatsCard
-                title="Total Items"
+                title={`Total ${result.request_type === "event" ? "Events" : "Transactions"} Processed`}
                 value={result.total_items.toLocaleString()}
-                description={`Number of ${result.request_type === "event" ? "events" : "transactions"}`}
+                icon="items"
               />
-              {Object.entries(result.stats).map(([key, value]) => (
-                <StatsCard
-                  key={key}
-                  title={key
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (c) => c.toUpperCase())}
-                  value={
-                    typeof value === "number" ? value.toLocaleString() : value
-                  }
-                  description=""
-                />
-              ))}
+
+              {/* Elapsed Time */}
+              <StatsCard
+                title="Elapsed Time (seconds)"
+                value={result.elapsed_time.toFixed(2)}
+                icon="time"
+              />
+
+              {/* Blocks per Second */}
+              <StatsCard
+                title="Blocks per Second"
+                value={Math.round(
+                  result.total_blocks / result.elapsed_time
+                ).toLocaleString()}
+                icon="density"
+              />
+
+              {/* Events/Transactions per Second */}
+              <StatsCard
+                title={`${result.request_type === "event" ? "Events" : "Transactions"} per Second`}
+                value={Math.round(
+                  result.total_items / result.elapsed_time
+                ).toLocaleString()}
+                icon="density"
+              />
             </div>
           </div>
         </div>
@@ -199,13 +232,120 @@ export default function ResultsDisplay({
 interface StatsCardProps {
   title: string;
   value: string | number;
-  description: string;
+  description?: string;
+  icon?: "blocks" | "items" | "density" | "time" | "average" | "max";
 }
 
-function StatsCard({ title, value, description }: StatsCardProps) {
+function StatsCard({ title, value, description, icon }: StatsCardProps) {
+  const getIcon = () => {
+    switch (icon) {
+      case "blocks":
+        return (
+          <svg
+            className="h-4 w-4 text-blue-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M20 7l-8-4-8 4m16 0l-8 4m8 4l-8 4m8-4l-8-4m8-4l-8-4m8 8l-8 4"
+            />
+          </svg>
+        );
+      case "items":
+        return (
+          <svg
+            className="h-4 w-4 text-green-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            />
+          </svg>
+        );
+      case "density":
+        return (
+          <svg
+            className="h-4 w-4 text-orange-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
+          </svg>
+        );
+      case "time":
+        return (
+          <svg
+            className="h-4 w-4 text-purple-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        );
+      case "average":
+        return (
+          <svg
+            className="h-4 w-4 text-envio-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z M9 17v-6 M12 17v-10 M15 17v-4"
+            />
+          </svg>
+        );
+      case "max":
+        return (
+          <svg
+            className="h-4 w-4 text-red-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+            />
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="bg-gray-50 p-4 rounded-lg">
-      <p className="text-xs font-medium text-gray-500 uppercase">{title}</p>
+    <div className="bg-gray-50/70 backdrop-blur-sm p-4 rounded-lg border border-gray-100/50 hover:shadow-sm transition-shadow">
+      <div className="flex items-center gap-1.5 mb-1">
+        {icon && getIcon()}
+        <p className="text-xs font-medium text-gray-500 uppercase">{title}</p>
+      </div>
       <p className="text-xl font-semibold mt-1">{value}</p>
       {description && (
         <p className="text-xs text-gray-500 mt-1">{description}</p>

@@ -44,9 +44,9 @@ export default function Hero() {
     <div className="relative min-h-[80vh] overflow-hidden flex items-center">
       <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
         <div className="text-center max-w-3xl mx-auto animate-fadeIn">
-          <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 mb-5 animate-pulse">
+          <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100/90 text-orange-800 border border-orange-200/70 shadow-sm mb-5 animate-pulse">
             <svg
-              className="mr-1.5 h-2 w-2 text-orange-400"
+              className="mr-1.5 h-2 w-2 text-orange-500"
               fill="currentColor"
               viewBox="0 0 8 8"
             >

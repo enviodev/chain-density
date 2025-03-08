@@ -108,10 +108,9 @@ export default function AnalysisForm({
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-gray-100/50 transition-all duration-300 hover:shadow-lg">
       <div className="p-6">
-        <h2 className="text-xl font-semibold mb-1">Generate Visualization</h2>
+        <h2 className="text-xl font-semibold mb-1">Get Started </h2>
         <p className="text-sm text-gray-500 mb-6">
-          Enter an address and select options to create your blockchain activity
-          visualization
+          Enter an address and select options to generate density visualization
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
