@@ -64,7 +64,7 @@ export default function ResultsDisplay({
       )}
 
       {/* Main Content */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 relative">
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/50 relative">
         {/* Clear button */}
         <button
           onClick={onClear}

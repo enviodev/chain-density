@@ -98,14 +98,30 @@ export default function ChainDensity() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-orange-50 to-gray-50 overflow-hidden">
       <Header />
 
-      <main className="flex-grow">
+      <main className="flex-grow relative">
+        {/* Background animated blobs that span the entire page */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Top section blobs */}
+          <div className="absolute top-10 left-1/4 w-96 h-96 bg-orange-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+          <div className="absolute top-40 right-1/3 w-96 h-96 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+
+          {/* Form area blobs - more prominent */}
+          <div className="absolute top-[60vh] -left-20 w-80 h-80 bg-envio-100 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-1000"></div>
+          <div className="absolute top-[65vh] right-10 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-3000"></div>
+
+          {/* Bottom section blobs */}
+          <div className="absolute bottom-40 left-1/3 w-80 h-80 bg-orange-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+          <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-envio-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-3000"></div>
+          <div className="absolute bottom-1/4 right-1/5 w-72 h-72 bg-orange-100 rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob animation-delay-5000"></div>
+        </div>
+
         {/* Full-screen hero section */}
         <section
           ref={heroRef}
-          className="min-h-screen flex flex-col justify-center"
+          className="min-h-screen flex flex-col justify-center relative"
         >
           <Hero />
 
@@ -122,7 +138,7 @@ export default function ChainDensity() {
         </section>
 
         {/* Results section */}
-        <section ref={resultsRef} className="py-8 md:py-16">
+        <section ref={resultsRef} className="py-8 md:py-16 relative">
           <div className="container mx-auto px-4">
             <div className="max-w-[1200px] mx-auto">
               {error && <ErrorDisplay message={error} />}

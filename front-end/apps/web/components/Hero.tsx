@@ -41,22 +41,7 @@ export default function Hero() {
   }, []);
 
   return (
-    <div className="relative min-h-[80vh] bg-gray-50 overflow-hidden flex items-center">
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-gray-50 opacity-70"></div>
-        <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-white to-transparent"></div>
-        <div className="absolute h-40 inset-x-0 bottom-0 bg-gradient-to-t from-white to-transparent"></div>
-
-        {/* Enhanced animated elements */}
-        <div className="absolute top-10 left-1/4 w-72 h-72 bg-orange-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-        <div className="absolute top-40 right-1/3 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-1/3 w-72 h-72 bg-orange-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
-
-        {/* Additional animated elements */}
-        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-envio-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-3000"></div>
-        <div className="absolute bottom-1/4 right-1/5 w-56 h-56 bg-orange-100 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-blob animation-delay-5000"></div>
-      </div>
-
+    <div className="relative min-h-[80vh] overflow-hidden flex items-center">
       <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
         <div className="text-center max-w-3xl mx-auto animate-fadeIn">
           <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 mb-5 animate-pulse">

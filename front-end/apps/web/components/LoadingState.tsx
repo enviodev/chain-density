@@ -40,7 +40,7 @@ export default function LoadingState() {
   }, []);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/50 p-6">
       <div className="flex flex-col items-center justify-center py-12">
         <div className="relative">
           <div className="h-16 w-16 rounded-full border-t-4 border-b-4 border-envio-500 animate-spin"></div>
@@ -63,7 +63,7 @@ export default function LoadingState() {
         </div>
 
         {/* Progress bar */}
-        <div className="mt-6 w-full max-w-md bg-gray-200 rounded-full h-2.5">
+        <div className="mt-6 w-full max-w-md bg-gray-200/70 rounded-full h-2.5">
           <div
             className="bg-gradient-to-r from-envio-500 to-orange-500 h-2.5 rounded-full transition-all duration-1000 ease-out"
             style={{ width: `${progressWidth}%` }}
@@ -74,15 +74,15 @@ export default function LoadingState() {
           <div className="space-y-3">
             <div className="flex items-center">
               <div className="w-4 h-4 bg-orange-200 rounded-full mr-3 animate-pulse"></div>
-              <div className="h-2.5 bg-gray-200 rounded-full w-full"></div>
+              <div className="h-2.5 bg-gray-200/70 rounded-full w-full"></div>
             </div>
             <div className="flex items-center">
               <div className="w-4 h-4 bg-orange-300 rounded-full mr-3 animate-pulse"></div>
-              <div className="h-2.5 bg-gray-200 rounded-full w-3/4"></div>
+              <div className="h-2.5 bg-gray-200/70 rounded-full w-3/4"></div>
             </div>
             <div className="flex items-center">
               <div className="w-4 h-4 bg-orange-400 rounded-full mr-3 animate-pulse"></div>
-              <div className="h-2.5 bg-gray-200 rounded-full w-1/2"></div>
+              <div className="h-2.5 bg-gray-200/70 rounded-full w-1/2"></div>
             </div>
           </div>
         </div>

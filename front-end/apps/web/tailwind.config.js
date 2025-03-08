@@ -103,6 +103,9 @@ module.exports = {
   plugins: [
     function ({ addUtilities, addComponents, addBase, theme }) {
       addUtilities({
+        ".animation-delay-1000": {
+          "animation-delay": "1s",
+        },
         ".animation-delay-2000": {
           "animation-delay": "2s",
         },
