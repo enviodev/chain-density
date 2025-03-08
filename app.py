@@ -19,6 +19,7 @@ import pyarrow as pa
 import numpy as np
 import psutil
 import signal
+from quart_cors import cors
 
 matplotlib.use('Agg')
 
@@ -52,6 +53,8 @@ async def fetch_chain_data():
     return chain_data
 
 app = Quart(__name__)
+# For development - restrict to specific origins in production
+app = cors(app, allow_origin="*")
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -81,6 +84,55 @@ async def index():
 
     sorted_networks = sorted(CHAIN_DATA.keys())
     return await render_template('index.html', networks=sorted_networks)
+
+
+@app.route('/api/networks', methods=['GET'])
+async def api_networks():
+    global CHAIN_DATA
+    if not CHAIN_DATA:
+        CHAIN_DATA = await fetch_chain_data()
+    sorted_networks = sorted(CHAIN_DATA.keys())
+    return {"networks": sorted_networks}
+
+
+@app.route('/api/data', methods=['POST'])
+async def api_data():
+    global CHAIN_DATA
+    if not CHAIN_DATA:
+        CHAIN_DATA = await fetch_chain_data()
+
+    # Get form data from request body as JSON
+    json_data = await request.get_json()
+    address = json_data['address'].lower()
+    request_type = json_data['type']
+    selected_network = json_data['network']
+    network_url = CHAIN_DATA.get(selected_network, {}).get(
+        'url', "https://eth.hypersync.xyz")
+
+    try:
+        directory, total_blocks, total_items, elapsed_time, start_block, is_cached = await fetch_data(address, selected_network, network_url, request_type)
+        if total_items == 0:
+            return {"error": f"No {request_type}s found for {address} on the {selected_network} network."}, 404
+
+        # Get the plot and stats
+        img, stats = create_plot(
+            directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached)
+
+        # Return JSON response with base64 encoded image
+        return {
+            "plot_url": img,
+            "stats": stats,
+            "request_type": request_type,
+            "address": address,
+            "network": selected_network,
+            "total_blocks": total_blocks,
+            "total_items": total_items,
+            "elapsed_time": elapsed_time
+        }
+    except Exception as e:
+        error_message = str(e)
+        print(f"Error: {error_message}")
+        return {"error": f"An unexpected error occurred. Error: {error_message}"}, 500
 
 
 def create_query(address, start_block, request_type):
