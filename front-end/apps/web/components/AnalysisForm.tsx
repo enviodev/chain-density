@@ -108,7 +108,7 @@ export default function AnalysisForm({
   return (
     <div className="bg-white/90 rounded-xl shadow-md border border-gray-100/50 transition-all duration-300 hover:shadow-lg">
       <div className="p-6">
-        <h2 className="text-xl font-semibold mb-1">Get Started </h2>
+        <h2 className="text-xl font-semibold mb-1 text-gray-900">Get Started </h2>
         <p className="text-sm text-gray-500 mb-6">
           Enter an address and select options to generate density visualization
         </p>
@@ -123,7 +123,7 @@ export default function AnalysisForm({
             </label>
             <input
               id="address"
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-envio-500 focus:border-envio-500 transition-colors"
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-envio-500 focus:border-envio-500 transition-colors text-gray-800"
               placeholder="0x..."
               value={address}
               onChange={(e) => setAddress(e.target.value)}
@@ -143,8 +143,8 @@ export default function AnalysisForm({
                 type="button"
                 className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
                   requestType === "event"
-                    ? "bg-envio-100 border-envio-300 text-envio-800 shadow-sm scale-[1.02]"
-                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                    ? "bg-envio-50 border-2 border-envio-400 text-envio-800 shadow-md scale-[1.02]"
+                    : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                 }`}
                 onClick={() => setRequestType("event")}
                 aria-pressed={requestType === "event"}
@@ -166,15 +166,15 @@ export default function AnalysisForm({
                       />
                     </svg>
                   )}
-                  <span>Events</span>
+                  <span className={`font-medium ${requestType === "event" ? "text-envio-800" : ""}`}>Events</span>
                 </div>
               </button>
               <button
                 type="button"
                 className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
                   requestType === "transaction"
-                    ? "bg-envio-100 border-envio-300 text-envio-800 shadow-sm scale-[1.02]"
-                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                    ? "bg-envio-50 border-2 border-envio-400 text-envio-800 shadow-md scale-[1.02]"
+                    : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                 }`}
                 onClick={() => setRequestType("transaction")}
                 aria-pressed={requestType === "transaction"}
@@ -196,7 +196,7 @@ export default function AnalysisForm({
                       />
                     </svg>
                   )}
-                  <span>Transactions</span>
+                  <span className={`font-medium ${requestType === "transaction" ? "text-envio-800" : ""}`}>Transactions</span>
                 </div>
               </button>
             </div>
@@ -212,7 +212,7 @@ export default function AnalysisForm({
             <div className="relative">
               <select
                 id="network"
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-envio-500 focus:border-envio-500 transition-colors appearance-none text-gray-800 pr-10"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-envio-500 focus:border-envio-500 transition-colors appearance-none text-gray-800 pr-10 font-medium"
                 value={network}
                 onChange={(e) => setNetwork(e.target.value)}
                 required
@@ -222,7 +222,7 @@ export default function AnalysisForm({
                 }}
               >
                 {networks.length === 0 ? (
-                  <option value="">Loading networks...</option>
+                  <option value="ethereum">Loading networks...</option>
                 ) : (
                   networks.map((net, index) => (
                     <option key={index} value={net.toLowerCase()}>
@@ -241,12 +241,6 @@ export default function AnalysisForm({
                 </svg>
               </div>
             </div>
-            
-            {network && (
-              <div className="mt-2 text-sm bg-envio-50 text-envio-600 rounded-md border border-envio-100 p-2">
-                Selected: <span className="font-bold">{network.charAt(0).toUpperCase() + network.slice(1)}</span>
-              </div>
-            )}
           </div>
 
           <div className="pt-2">
