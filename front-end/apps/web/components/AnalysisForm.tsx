@@ -209,23 +209,44 @@ export default function AnalysisForm({
             >
               Network
             </label>
-            <select
-              id="network"
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-envio-500 focus:border-envio-500 transition-colors"
-              value={network}
-              onChange={(e) => setNetwork(e.target.value)}
-              required
-            >
-              {networks.length === 0 ? (
-                <option value="">Loading networks...</option>
-              ) : (
-                networks.map((net, index) => (
-                  <option key={index} value={net.toLowerCase()}>
-                    {net.charAt(0).toUpperCase() + net.slice(1)}
-                  </option>
-                ))
-              )}
-            </select>
+            <div className="relative">
+              <select
+                id="network"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-envio-500 focus:border-envio-500 transition-colors appearance-none text-gray-800 pr-10"
+                value={network}
+                onChange={(e) => setNetwork(e.target.value)}
+                required
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none'
+                }}
+              >
+                {networks.length === 0 ? (
+                  <option value="">Loading networks...</option>
+                ) : (
+                  networks.map((net, index) => (
+                    <option key={index} value={net.toLowerCase()}>
+                      {net.charAt(0).toUpperCase() + net.slice(1)}
+                    </option>
+                  ))
+                )}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 bg-gray-100 border-l border-gray-200 rounded-r-lg">
+                <svg
+                  className="fill-current h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                </svg>
+              </div>
+            </div>
+            
+            {network && (
+              <div className="mt-2 text-sm bg-envio-50 text-envio-600 rounded-md border border-envio-100 p-2">
+                Selected: <span className="font-bold">{network.charAt(0).toUpperCase() + network.slice(1)}</span>
+              </div>
+            )}
           </div>
 
           <div className="pt-2">
