@@ -50,11 +50,13 @@ async def fetch_chain_data():
             'chain_id': chain['chain_id'],
             'url': f"https://{chain['name']}.{hypersync_domain}"
         }
+
     return chain_data
 
+
 app = Quart(__name__)
-# For development - restrict to specific origins in production
-app = cors(app, allow_origin="*")
+allowed_origins = os.environ.get('ALLOWED_ORIGINS', '*')
+app = cors(app, allow_origin=allowed_origins)
 
 
 @app.route('/', methods=['GET', 'POST'])

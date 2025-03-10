@@ -17,12 +17,14 @@ export default function ChainDensity() {
   const resultsRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
+  
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
 
   // Fetch available networks on component mount
   useEffect(() => {
     const fetchNetworks = async () => {
       try {
-        const response = await fetch("http://localhost:5001/api/networks");
+        const response = await fetch(`${apiBaseUrl}/networks`);
         const data = await response.json();
         setNetworks(data.networks);
       } catch (error) {
@@ -32,7 +34,7 @@ export default function ChainDensity() {
     };
 
     fetchNetworks();
-  }, []);
+  }, [apiBaseUrl]);
 
   const handleAnalysisSubmit = async (
     address: string,
@@ -51,7 +53,7 @@ export default function ChainDensity() {
     }, 100);
 
     try {
-      const response = await fetch("http://localhost:5001/api/data", {
+      const response = await fetch(`${apiBaseUrl}/data`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
