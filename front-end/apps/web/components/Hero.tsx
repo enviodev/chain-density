@@ -8,7 +8,8 @@ export default function Hero() {
   useEffect(() => {
     const fetchNetworks = async () => {
       try {
-        const response = await fetch("http://localhost:5001/api/networks");
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+        const response = await fetch(`${apiBaseUrl}/networks`);
         const data = await response.json();
         if (data.networks && Array.isArray(data.networks)) {
           // Filter out any non-string values
