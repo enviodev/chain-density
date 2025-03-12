@@ -163,12 +163,14 @@ export default function ChainDensity() {
         {/* Full-screen hero section */}
         <section
           ref={heroRef}
-          className="min-h-screen flex flex-col justify-center relative"
+          className="min-h-screen flex flex-col justify-center items-center relative pt-10"
         >
-          <Hero />
+          <div className="mb-0">
+            <Hero />
+          </div>
 
-          {/* Centered analysis form */}
-          <div className="container mx-auto px-4 -mt-52 sm:-mt-60 md:-mt-64 lg:-mt-72 relative z-20 mb-8 sm:mb-16">
+          {/* Centered analysis form - FIXED POSITIONING */}
+          <div className="container mx-auto px-4 relative z-20 mt-0">
             <div className="max-w-xl mx-auto transform transition-all duration-500 ease-in-out hover:scale-[1.01]">
               <AnalysisForm
                 networks={networks}

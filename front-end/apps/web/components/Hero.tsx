@@ -42,14 +42,14 @@ export default function Hero() {
   }, []);
 
   return (
-    <div className="relative min-h-[80vh] overflow-hidden flex items-center">
-      <div className="container mx-auto px-4 py-12 md:py-24 relative z-10">
+    <div className="relative min-h-[30vh] overflow-hidden flex items-center">
+      <div className="container mx-auto px-4 py-6 md:py-10 relative z-10">
         <div className="text-center max-w-3xl mx-auto animate-fadeIn">
           <a
             href="https://docs.envio.dev/docs/HyperSync/overview"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100/90 text-orange-800 border border-orange-200/70 shadow-sm mb-5 animate-pulse hover:bg-orange-200/90 transition-colors"
+            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100/90 text-orange-800 border border-orange-200/70 shadow-sm mb-3 animate-pulse hover:bg-orange-200/90 transition-colors"
           >
             <svg
               className="mr-1.5 h-2 w-2 text-orange-500"
@@ -78,7 +78,7 @@ export default function Hero() {
             <UseCaseDisplay />
           </div>
 
-          <div className="mt-8 animate-bounce animation-delay-700">
+          <div className="mt-4 animate-bounce animation-delay-700">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-6 w-6 mx-auto text-gray-400"
