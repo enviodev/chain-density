@@ -41,6 +41,12 @@ export default function AnalysisForm({
       name: "EigenLayer Strategy Manager",
       network: "ethereum",
     },
+    {
+      address: "0x3aE6D8A282D67893e17AA70ebFFb33EE5aa65893",
+      type: "transaction",
+      name: "Uniswap Router Monad Testnet",
+      network: "monad-testnet",
+    },
   ];
 
   // Set initial network when networks are loaded
@@ -86,6 +92,21 @@ export default function AnalysisForm({
 
       if (ethNetwork) {
         targetNetwork = ethNetwork.toLowerCase();
+      }
+    }
+
+    // Special case for monad-testnet
+    if (targetNetwork === "monad-testnet") {
+      // Look for monad-testnet or similar networks
+      const monadNetwork = networks.find(
+        (net) =>
+          net.toLowerCase() === "monad-testnet" ||
+          net.toLowerCase() === "monad" ||
+          net.toLowerCase() === "monadtestnet"
+      );
+
+      if (monadNetwork) {
+        targetNetwork = monadNetwork.toLowerCase();
       }
     }
 
