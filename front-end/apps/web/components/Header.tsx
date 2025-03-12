@@ -12,12 +12,7 @@ export default function Header() {
               alt="Chain Density Logo"
               className="h-8 w-8"
             />
-            <div className="font-bold text-xl">
-              <span className="text-gray-900">Chain</span>
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-envio-500 to-orange-600">
-                {" Density"}
-              </span>
-            </div>
+            <div className="font-bold text-xl text-gray-900">Chain Density</div>
           </Link>
         </div>
       </div>

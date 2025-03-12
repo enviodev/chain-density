@@ -29,13 +29,35 @@ ChainDensity is a web application that visualizes event and transaction density 
    uv pip install -r requirements.txt
    ```
 
-5. Run the application:
+5. Configure the front-end:
+
+   Create a `.env.local` file in the `front-end/apps/web` directory with the following content:
+
+   ```
+   # API Base URL for local development
+   NEXT_PUBLIC_API_URL=http://localhost:5001/api
+   ```
+
+   This allows the front-end to connect to the local API server.
+
+6. Run the backend API server:
 
    ```
    python app.py
    ```
 
-6. Open your web browser and navigate to `http://localhost:5001`.
+   This will start the API server at `http://localhost:5001`.
+
+7. In a separate terminal, start the front-end development server:
+
+   ```
+   cd front-end
+   pnpm dev
+   ```
+
+   This will start the front-end development server at `http://localhost:3000`.
+
+8. Open your web browser and navigate to `http://localhost:3000` to access the front-end application.
 
 ### Option 2: Docker Setup
 

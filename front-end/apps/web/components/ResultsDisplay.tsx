@@ -344,11 +344,11 @@ function StatsCard({ title, value, description, icon }: StatsCardProps) {
     <div className="bg-gray-50/70 backdrop-blur-sm p-4 rounded-lg border border-gray-100/50 hover:shadow-sm transition-shadow">
       <div className="flex items-center gap-1.5 mb-1">
         {icon && getIcon()}
-        <p className="text-xs font-medium text-gray-500 uppercase">{title}</p>
+        <p className="text-xs font-medium text-gray-600 uppercase">{title}</p>
       </div>
-      <p className="text-xl font-semibold mt-1">{value}</p>
+      <p className="text-xl font-semibold mt-1 text-gray-800">{value}</p>
       {description && (
-        <p className="text-xs text-gray-500 mt-1">{description}</p>
+        <p className="text-xs text-gray-600 mt-1">{description}</p>
       )}
     </div>
   );

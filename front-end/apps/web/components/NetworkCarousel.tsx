@@ -116,9 +116,7 @@ export default function NetworkCarousel({ networks }: NetworkCarouselProps) {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        {/* Gradient overlays */}
-        <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none"></div>
-        <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none"></div>
+        {/* Removed gradient overlays */}
 
         {/* Center highlight */}
         <div className="absolute left-1/2 top-0 bottom-0 w-28 -ml-14 bg-gradient-to-r from-transparent via-envio-50/30 to-transparent z-0 pointer-events-none"></div>
@@ -182,15 +180,15 @@ function NetworkBubble({
           px-3 py-1 rounded-full whitespace-nowrap transition-all duration-300
           ${
             isCenter
-              ? "bg-gradient-to-r from-white to-orange-50 shadow-md border border-envio-200 transform scale-110"
-              : "bg-white shadow-sm border border-gray-100 hover:shadow-md"
+              ? "bg-gradient-to-r from-white to-orange-50 shadow-md border border-orange-100 transform scale-110"
+              : "bg-white shadow-sm border border-gray-50 hover:shadow-md"
           }
         `}
       >
         <span
           className={`
-            text-xs font-medium transition-all duration-300
-            ${isCenter ? "text-envio-700 font-semibold" : "text-gray-700"}
+            text-xs font-medium transition-all duration-300 text-gray-700
+            ${isCenter ? "font-semibold" : ""}
           `}
         >
           {name.charAt(0).toUpperCase() + name.slice(1)}

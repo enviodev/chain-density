@@ -17,14 +17,32 @@ export default function ChainDensity() {
   const resultsRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
-  
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
 
   // Fetch available networks on component mount
   useEffect(() => {
     const fetchNetworks = async () => {
       try {
         const response = await fetch(`${apiBaseUrl}/networks`);
+
+        // Check if response is ok first
+        if (!response.ok) {
+          setError(`API error: ${response.status} ${response.statusText}`);
+          return;
+        }
+
+        const contentType = response.headers.get("content-type");
+
+        // Handle non-JSON response gracefully
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("API returned non-JSON response:", contentType);
+          setError(
+            "API returned non-JSON response. Check the API server and CORS settings."
+          );
+          return;
+        }
+
         const data = await response.json();
         setNetworks(data.networks);
       } catch (error) {
@@ -65,12 +83,34 @@ export default function ChainDensity() {
         }),
       });
 
-      const data = await response.json();
-
+      // Check response status first
       if (!response.ok) {
-        throw new Error(data.error || "An unexpected error occurred");
+        // Try to get error message from JSON response if possible
+        try {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error ||
+              `API error: ${response.status} ${response.statusText}`
+          );
+        } catch (jsonError) {
+          // If JSON parsing failed, use status text
+          throw new Error(
+            `API error: ${response.status} ${response.statusText}`
+          );
+        }
       }
 
+      const contentType = response.headers.get("content-type");
+
+      // Handle non-JSON response gracefully
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("API returned non-JSON response:", contentType);
+        throw new Error(
+          "API returned non-JSON response. Check the API server."
+        );
+      }
+
+      const data = await response.json();
       setResult(data);
 
       // Scroll to results after they're loaded
@@ -100,24 +140,24 @@ export default function ChainDensity() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-orange-50 to-gray-50 overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-orange-200 to-gray-50 overflow-hidden">
       <Header />
 
       <main className="flex-grow relative">
         {/* Background animated blobs that span the entire page */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* Top section blobs */}
-          <div className="absolute top-10 left-1/4 w-96 h-96 bg-orange-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-          <div className="absolute top-40 right-1/3 w-96 h-96 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+          <div className="absolute top-10 left-1/4 w-96 h-96 bg-orange-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob"></div>
+          <div className="absolute top-40 right-1/3 w-96 h-96 bg-orange-400 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-2000"></div>
 
           {/* Form area blobs - more prominent */}
-          <div className="absolute top-[60vh] -left-20 w-80 h-80 bg-envio-100 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-1000"></div>
-          <div className="absolute top-[65vh] right-10 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-3000"></div>
+          <div className="absolute top-[60vh] -left-20 w-80 h-80 bg-envio-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-1000"></div>
+          <div className="absolute top-[65vh] right-10 w-72 h-72 bg-orange-400 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-3000"></div>
 
           {/* Bottom section blobs */}
-          <div className="absolute bottom-40 left-1/3 w-80 h-80 bg-orange-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
-          <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-envio-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-3000"></div>
-          <div className="absolute bottom-1/4 right-1/5 w-72 h-72 bg-orange-100 rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob animation-delay-5000"></div>
+          <div className="absolute bottom-40 left-1/3 w-80 h-80 bg-orange-500 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-4000"></div>
+          <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-envio-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-3000"></div>
+          <div className="absolute bottom-1/4 right-1/5 w-72 h-72 bg-orange-300 rounded-full mix-blend-multiply filter blur-3xl opacity-55 animate-blob animation-delay-5000"></div>
         </div>
 
         {/* Full-screen hero section */}
@@ -128,7 +168,7 @@ export default function ChainDensity() {
           <Hero />
 
           {/* Centered analysis form */}
-          <div className="container mx-auto px-4 -mt-8 sm:-mt-16 md:-mt-24 lg:-mt-32 relative z-20 mb-8 sm:mb-16">
+          <div className="container mx-auto px-4 -mt-52 sm:-mt-60 md:-mt-64 lg:-mt-72 relative z-20 mb-8 sm:mb-16">
             <div className="max-w-xl mx-auto transform transition-all duration-500 ease-in-out hover:scale-[1.01]">
               <AnalysisForm
                 networks={networks}

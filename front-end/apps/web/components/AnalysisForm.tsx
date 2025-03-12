@@ -108,7 +108,9 @@ export default function AnalysisForm({
   return (
     <div className="bg-white/90 rounded-xl shadow-md border border-gray-100/50 transition-all duration-300 hover:shadow-lg">
       <div className="p-6">
-        <h2 className="text-xl font-semibold mb-1 text-gray-900">Get Started </h2>
+        <h2 className="text-xl font-semibold mb-1 text-gray-900">
+          Get Started{" "}
+        </h2>
         <p className="text-sm text-gray-500 mb-6">
           Enter an address and select options to generate density visualization
         </p>
@@ -143,7 +145,7 @@ export default function AnalysisForm({
                 type="button"
                 className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
                   requestType === "event"
-                    ? "bg-envio-50 border-2 border-envio-400 text-envio-800 shadow-md scale-[1.02]"
+                    ? "bg-envio-50 border-2 border-envio-400 text-gray-800 shadow-md scale-[1.02]"
                     : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                 }`}
                 onClick={() => setRequestType("event")}
@@ -166,14 +168,14 @@ export default function AnalysisForm({
                       />
                     </svg>
                   )}
-                  <span className={`font-medium ${requestType === "event" ? "text-envio-800" : ""}`}>Events</span>
+                  <span className="font-medium text-gray-800">Events</span>
                 </div>
               </button>
               <button
                 type="button"
                 className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
                   requestType === "transaction"
-                    ? "bg-envio-50 border-2 border-envio-400 text-envio-800 shadow-md scale-[1.02]"
+                    ? "bg-envio-50 border-2 border-envio-400 text-gray-800 shadow-md scale-[1.02]"
                     : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                 }`}
                 onClick={() => setRequestType("transaction")}
@@ -196,7 +198,9 @@ export default function AnalysisForm({
                       />
                     </svg>
                   )}
-                  <span className={`font-medium ${requestType === "transaction" ? "text-envio-800" : ""}`}>Transactions</span>
+                  <span className="font-medium text-gray-800">
+                    Transactions
+                  </span>
                 </div>
               </button>
             </div>
@@ -217,15 +221,19 @@ export default function AnalysisForm({
                 onChange={(e) => setNetwork(e.target.value)}
                 required
                 style={{
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none'
+                  WebkitAppearance: "none",
+                  MozAppearance: "none",
                 }}
               >
                 {networks.length === 0 ? (
                   <option value="ethereum">Loading networks...</option>
                 ) : (
                   networks.map((net, index) => (
-                    <option key={index} value={net.toLowerCase()}>
+                    <option
+                      key={index}
+                      value={net.toLowerCase()}
+                      className="text-gray-800"
+                    >
                       {net.charAt(0).toUpperCase() + net.slice(1)}
                     </option>
                   ))

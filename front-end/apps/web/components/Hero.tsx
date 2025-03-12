@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
-import NetworkCarousel from "./NetworkCarousel";
+import UseCaseDisplay from "./UseCaseDisplay";
 
 export default function Hero() {
   const [networks, setNetworks] = useState<string[]>([]);
 
-  // Fetch available networks
+  // Fetch available networks (still needed for the form)
   useEffect(() => {
     const fetchNetworks = async () => {
       try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
         const response = await fetch(`${apiBaseUrl}/networks`);
         const data = await response.json();
         if (data.networks && Array.isArray(data.networks)) {
@@ -19,7 +19,7 @@ export default function Hero() {
           setNetworks(validNetworks);
         }
       } catch (error) {
-        console.error("Error fetching networks for carousel:", error);
+        console.error("Error fetching networks:", error);
         // Use fallback networks if API fails
         setNetworks([
           "ethereum",
@@ -65,13 +65,12 @@ export default function Hero() {
 
           <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-4 animate-slideUp animation-delay-300">
             Analyze and visualize event and transaction density for any address
-            across 60+ chains. Useful for trends and understanding indexing
-            efforts.
+            across 70+ chains.
           </p>
 
-          {/* Network Carousel - reduced margin */}
+          {/* Use Cases Display */}
           <div className="animate-fadeIn animation-delay-500">
-            <NetworkCarousel networks={networks} />
+            <UseCaseDisplay />
           </div>
 
           <div className="mt-8 animate-bounce animation-delay-700">
