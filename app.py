@@ -1,25 +1,26 @@
+from quart_cors import cors
+import signal
+import psutil
+import numpy as np
+import pyarrow as pa
+import logging
+import aiohttp
+import polars as pl
+import pandas as pd
+import asyncio
+from hypersync import LogSelection, LogField, DataType, FieldSelection, ColumnMapping, TransactionField, ClientConfig, JoinMode, TransactionSelection
+import hypersync
+from quart import Quart, request, render_template
+from matplotlib.patches import Patch
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import time
 import shutil
 import pyarrow.parquet as pq
 import os
 import base64
 import io
-import matplotlib.ticker as ticker
-import matplotlib.pyplot as plt
-from quart import Quart, request, render_template
-import hypersync
-from hypersync import LogSelection, LogField, DataType, FieldSelection, ColumnMapping, TransactionField, ClientConfig, JoinMode, TransactionSelection
-import asyncio
-import pandas as pd
-import polars as pl
 import matplotlib
-import aiohttp
-import logging
-import pyarrow as pa
-import numpy as np
-import psutil
-import signal
-
 matplotlib.use('Agg')
 
 CHAIN_DATA = {}
@@ -49,9 +50,13 @@ async def fetch_chain_data():
             'chain_id': chain['chain_id'],
             'url': f"https://{chain['name']}.{hypersync_domain}"
         }
+
     return chain_data
 
+
 app = Quart(__name__)
+allowed_origins = os.environ.get('ALLOWED_ORIGINS', '*')
+app = cors(app, allow_origin=allowed_origins)
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -81,6 +86,55 @@ async def index():
 
     sorted_networks = sorted(CHAIN_DATA.keys())
     return await render_template('index.html', networks=sorted_networks)
+
+
+@app.route('/api/networks', methods=['GET'])
+async def api_networks():
+    global CHAIN_DATA
+    if not CHAIN_DATA:
+        CHAIN_DATA = await fetch_chain_data()
+    sorted_networks = sorted(CHAIN_DATA.keys())
+    return {"networks": sorted_networks}
+
+
+@app.route('/api/data', methods=['POST'])
+async def api_data():
+    global CHAIN_DATA
+    if not CHAIN_DATA:
+        CHAIN_DATA = await fetch_chain_data()
+
+    # Get form data from request body as JSON
+    json_data = await request.get_json()
+    address = json_data['address'].lower()
+    request_type = json_data['type']
+    selected_network = json_data['network']
+    network_url = CHAIN_DATA.get(selected_network, {}).get(
+        'url', "https://eth.hypersync.xyz")
+
+    try:
+        directory, total_blocks, total_items, elapsed_time, start_block, is_cached = await fetch_data(address, selected_network, network_url, request_type)
+        if total_items == 0:
+            return {"error": f"No {request_type}s found for {address} on the {selected_network} network."}, 404
+
+        # Get the plot and stats
+        img, stats = create_plot(
+            directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached)
+
+        # Return JSON response with base64 encoded image
+        return {
+            "plot_url": img,
+            "stats": stats,
+            "request_type": request_type,
+            "address": address,
+            "network": selected_network,
+            "total_blocks": total_blocks,
+            "total_items": total_items,
+            "elapsed_time": elapsed_time
+        }
+    except Exception as e:
+        error_message = str(e)
+        print(f"Error: {error_message}")
+        return {"error": f"An unexpected error occurred. Error: {error_message}"}, 500
 
 
 def create_query(address, start_block, request_type):
@@ -298,8 +352,20 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 def create_plot(directory, request_type, total_blocks, total_items, elapsed_time, start_block, is_cached):
     logger.info("Starting create_plot function")
-    plt.figure(figsize=(15, 7))
-    logger.info("Created figure with size (15, 7)")
+    # Even larger size and higher resolution
+    plt.figure(figsize=(30, 15), dpi=120)
+    logger.info("Created figure with size (30, 15) and dpi=120")
+
+    # Set global font sizes - much larger
+    plt.rcParams.update({
+        'font.size': 16,
+        'axes.titlesize': 22,
+        'axes.labelsize': 18,
+        'xtick.labelsize': 16,
+        'ytick.labelsize': 16,
+        'legend.fontsize': 16,
+        'figure.titlesize': 24
+    })
 
     is_event_request = request_type == "event"
     file_suffix = 'logs' if is_event_request else 'transactions'
@@ -402,24 +468,54 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
         raise
 
     logger.info("Plotting bar chart")
+    # Set a modern style
+    plt.style.use('seaborn-v0_8-whitegrid')
+
+    # Create a more visually appealing color palette with Envio's burnt orange
+    bar_color = '#ff6347'  # Burnt orange/coral color
+    line_color = '#2a4365'  # Dark blue for contrast
+    grid_color = '#f3f4f6'  # Even lighter gray for less intense grid
+
+    # Plot with enhanced styling
     ax = interval_counts_pd['count'].plot(
-        kind='bar', color='lightblue', edgecolor='black')
+        kind='bar', color=bar_color, edgecolor='none', alpha=0.8, width=0.8)
+
+    # Customize grid - make it much lighter
+    ax.grid(axis='y', linestyle='--', alpha=0.4, color=grid_color)
+    ax.grid(axis='x', visible=False)  # Remove x-axis grid completely
+
+    # Remove spines
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_alpha(0.3)
+    ax.spines['bottom'].set_alpha(0.3)
 
     ylabel = 'Number of Events' if is_event_request else 'Number of Transactions'
-    title = (f'Number of Events per Block Interval (Size {interval_size})'
+    title = (f'Number of Events per Block Interval (Size {format_with_commas(interval_size)})'
              if is_event_request
-             else f'Number of Transactions per Block Interval (Size {interval_size})')
+             else f'Number of Transactions per Block Interval (Size {format_with_commas(interval_size)})')
 
     logger.info(f"Setting labels and title. Y-label: {ylabel}")
-    plt.xlabel('Block Number Interval')
-    plt.ylabel(ylabel)
-    plt.title(title)
+    plt.xlabel('Block Number Interval', fontsize=18, labelpad=12)
+    plt.ylabel(ylabel, fontsize=18, labelpad=12)
+    plt.title(title, fontsize=24, pad=20, fontweight='bold')
 
     logger.info("Setting x-axis ticks and labels")
     x_labels = [f"{format_with_commas(int(left))}-{format_with_commas(int(right))}"
                 for left, right in zip(intervals[:-1], intervals[1:])]
+
+    # Show fewer x-axis labels for better readability
+    max_labels = 15  # Even fewer labels for better readability
+    if len(x_labels) > max_labels:
+        step = len(x_labels) // max_labels
+        visible_indices = range(0, len(x_labels), step)
+        visible_labels = [
+            x_labels[i] if i in visible_indices else '' for i in range(len(x_labels))]
+    else:
+        visible_labels = x_labels
+
     plt.xticks(ticks=range(len(x_labels)),
-               labels=x_labels, rotation=45, ha='right')
+               labels=visible_labels, rotation=45, ha='right', fontsize=16)
 
     logger.info("Formatting y-axis with commas")
     ax.get_yaxis().set_major_formatter(
@@ -429,11 +525,53 @@ def create_plot(directory, request_type, total_blocks, total_items, elapsed_time
     ax2 = ax.twinx()
     logger.info("Plotting cumulative sum on secondary y-axis")
     ax2.plot(range(len(interval_counts_pd)), interval_counts_pd['count'].cumsum(),
-             color='red', marker='o', linestyle='-')
-    ax2.set_ylabel('Cumulative Total', color='red')
-    ax2.tick_params(axis='y', colors='red')
+             color=line_color, marker='o', markersize=6, linestyle='-', linewidth=3, alpha=0.8)
+    ax2.set_ylabel('Cumulative Total', color=line_color,
+                   fontsize=18, labelpad=12)
+    ax2.tick_params(axis='y', colors=line_color, labelsize=16)
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['left'].set_visible(False)
+    ax2.spines['right'].set_alpha(0.3)
+    ax2.spines['bottom'].set_visible(False)
     ax2.get_yaxis().set_major_formatter(
         ticker.FuncFormatter(lambda x, p: format_with_commas(x)))
+
+    # Create legend - position it at the top right instead of top left
+    legend_elements = [
+        Patch(facecolor=bar_color, edgecolor='none', alpha=0.8,
+              label=f'{"Events" if is_event_request else "Transactions"} per Interval'),
+        plt.Line2D([0], [0], color=line_color, marker='o', markersize=6,
+                   linewidth=3, alpha=0.8, label='Cumulative Total')
+    ]
+    plt.legend(handles=legend_elements, loc='upper right',
+               frameon=True, framealpha=0.9, fontsize=16)
+
+    # Add annotations for key statistics
+    max_count_idx = interval_counts_pd['count'].idxmax()
+    max_count = interval_counts_pd.loc[max_count_idx, 'count']
+
+    # Remove the max annotation as it's confusing
+    # Instead, highlight the maximum bar with a different color
+    max_idx = interval_counts_pd['count'].argmax()
+
+    # Get the existing bar patches
+    bars = [p for p in ax.patches]
+    # Change the color of the maximum bar
+    if len(bars) > max_idx:
+        bars[max_idx].set_color('#e53e3e')  # Highlight color
+        bars[max_idx].set_edgecolor('none')
+
+    # Add a text box with summary statistics - position at top left with more padding
+    total_text = f'Total {"Events" if is_event_request else "Transactions"}: {format_with_commas(total_items)}'
+    blocks_text = f'Blocks Analyzed: {format_with_commas(total_blocks)}'
+    density_text = f'Average Density: {format_with_commas(round(total_items/total_blocks))} per block'
+    max_text = f'Maximum: {format_with_commas(max_count)} in interval {max_count_idx}'
+
+    props = dict(boxstyle='round', facecolor='white',
+                 alpha=0.9, edgecolor='#d1d5db')
+    plt.text(0.02, 0.92, f'{total_text}\n{blocks_text}\n{density_text}\n{max_text}',
+             transform=ax.transAxes, fontsize=16,  # Much larger font
+             verticalalignment='top', bbox=props)
 
     logger.info("Adjusting layout")
     plt.tight_layout()

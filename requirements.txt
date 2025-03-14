@@ -6,3 +6,4 @@ pyarrow
 polars
 aiohttp
 psutil
+quart-cors

@@ -1,0 +1,25 @@
+
+FROM python:3.12-slim
+
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    capnproto \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+COPY requirements.txt app.py ./
+COPY templates/ ./templates/
+COPY static/ ./static/
+COPY data/ ./data/ 
+COPY assets/ ./assets/
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+
+CMD ["hypercorn", "app:app", "--bind", "0.0.0.0:5001", "--workers", "4", "--keep-alive", "300", "--graceful-timeout", "300", "--log-level", "debug", "--access-logfile", "access.log", "--error-logfile", "error.log"] 
