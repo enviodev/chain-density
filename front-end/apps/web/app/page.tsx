@@ -8,17 +8,18 @@ import AnalysisForm from "@/components/AnalysisForm";
 import LoadingState from "@/components/LoadingState";
 import ResultsDisplay from "@/components/ResultsDisplay";
 import ErrorDisplay from "@/components/ErrorDisplay";
+import type { AnalysisResult } from "@/lib/types";
 
 export default function ChainDensity() {
   const [networks, setNetworks] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
 
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
+  const apiBaseUrl = "/api";
 
   // Fetch available networks on component mount
   useEffect(() => {
@@ -85,19 +86,14 @@ export default function ChainDensity() {
 
       // Check response status first
       if (!response.ok) {
-        // Try to get error message from JSON response if possible
+        let message = `API error: ${response.status} ${response.statusText}`;
         try {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error ||
-              `API error: ${response.status} ${response.statusText}`
-          );
-        } catch (jsonError) {
-          // If JSON parsing failed, use status text
-          throw new Error(
-            `API error: ${response.status} ${response.statusText}`
-          );
+          const errorData = (await response.json()) as { error?: string };
+          message = errorData.error || message;
+        } catch {
+          // Keep the HTTP status message when the response is not JSON.
         }
+        throw new Error(message);
       }
 
       const contentType = response.headers.get("content-type");
@@ -119,9 +115,11 @@ export default function ChainDensity() {
           resultsRef.current.scrollIntoView({ behavior: "smooth" });
         }
       }, 100);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error:", error);
-      setError(error.message || "An unexpected error occurred");
+      setError(
+        error instanceof Error ? error.message : "An unexpected error occurred"
+      );
     } finally {
       setLoading(false);
     }

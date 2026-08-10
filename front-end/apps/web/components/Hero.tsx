@@ -1,46 +1,6 @@
-import { useEffect, useState } from "react";
 import UseCaseDisplay from "./UseCaseDisplay";
 
 export default function Hero() {
-  const [networks, setNetworks] = useState<string[]>([]);
-
-  // Fetch available networks (still needed for the form)
-  useEffect(() => {
-    const fetchNetworks = async () => {
-      try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
-        const response = await fetch(`${apiBaseUrl}/networks`);
-        const data = await response.json();
-        if (data.networks && Array.isArray(data.networks)) {
-          // Filter out any non-string values
-          const validNetworks = data.networks.filter(
-            (network: any): network is string => typeof network === "string"
-          );
-          setNetworks(validNetworks);
-        }
-      } catch (error) {
-        console.error("Error fetching networks:", error);
-        // Use fallback networks if API fails
-        setNetworks([
-          "ethereum",
-          "optimism",
-          "arbitrum",
-          "polygon",
-          "avalanche",
-          "base",
-          "bsc",
-          "fantom",
-          "gnosis",
-          "celo",
-          "moonbeam",
-          "unichain",
-        ]);
-      }
-    };
-
-    fetchNetworks();
-  }, []);
-
   return (
     <div className="relative min-h-[30vh] overflow-hidden flex items-center">
       <div className="container mx-auto px-4 py-6 md:py-10 relative z-10">

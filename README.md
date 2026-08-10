@@ -1,103 +1,81 @@
 # ChainDensity
 
-ChainDensity is a web application that visualizes event and transaction density for Ethereum and other EVM-compatible blockchains.
+ChainDensity visualizes event and transaction activity for any EVM address
+across HyperSync-supported networks.
 
-## Setup
+The current application is a single Next.js project. Its route handlers query
+HyperSync with the official Node client, aggregate streaming results into small
+density buckets, and send compact JSON to an SVG chart in the browser. No
+separate Python service or persistent Parquet cache is required.
 
-### Option 1: Local Setup
+## Local development
 
-1. Install Python 3.10 or higher.
+Prerequisites:
 
-2. Install uv:
+- Node.js 20.9 or newer
+- pnpm 10
+- An Envio API token
 
-   ```
-   pip install uv
-   ```
+Install and configure the app:
 
-3. Clone the repository:
+```bash
+cd front-end
+pnpm install --frozen-lockfile
+cp apps/web/.env.example apps/web/.env.local
+```
 
-   ```
-   git clone git@github.com:enviodev/event-density-hack.git
-   cd chaindensity
-   ```
+Set your token in `apps/web/.env.local`:
 
-4. Create a virtual environment and install dependencies:
+```bash
+ENVIO_API_TOKEN=your-token-here
+```
 
-   ```
-   uv venv
-   source .venv/bin/activate  # On Windows, use: .venv\Scripts\activate
-   uv pip install -r requirements.txt
-   ```
+Start the unified application:
 
-5. Configure the front-end:
+```bash
+pnpm --filter web dev
+```
 
-   Create a `.env.local` file in the `front-end/apps/web` directory with the following content:
+Open [http://localhost:3000](http://localhost:3000). Both the UI and API routes
+are served by Next.js.
 
-   ```
-   # API Base URL for local development
-   NEXT_PUBLIC_API_URL=http://localhost:5001/api
-   ```
+## API routes
 
-   This allows the front-end to connect to the local API server.
+- `GET /api/networks` returns currently active EVM HyperSync networks.
+- `POST /api/data` accepts `address`, `type` (`event` or `transaction`), and
+  `network`, then returns density buckets and summary statistics.
 
-6. Run the backend API server:
+Analysis runs on a fixed chain-height snapshot. HyperSync results are streamed,
+with only the block number selected for each matching event or transaction.
+Each streamed batch is folded directly into roughly 64 counters and then
+discarded, so memory usage stays bounded even for large histories. Only those
+small aggregate buckets are returned to the browser. Completed results receive
+a best-effort ten-minute warm-instance cache.
 
-   ```
-   python app.py
-   ```
+## Vercel
 
-   This will start the API server at `http://localhost:5001`.
+Import this repository as one Vercel project and select
+`front-end/apps/web` as the Root Directory. Vercel understands the surrounding
+pnpm/Turborepo workspace and detects Next.js automatically.
 
-7. In a separate terminal, start the front-end development server:
+Add this server-only environment variable for Production, Preview, and
+Development:
 
-   ```
-   cd front-end
-   pnpm dev
-   ```
+```bash
+ENVIO_API_TOKEN=your-token-here
+```
 
-   This will start the front-end development server at `http://localhost:3000`.
+The analysis route uses the Node.js runtime and requests the Hobby-plan maximum
+duration of five minutes. It returns aggregate JSON rather than raw events or
+generated image data, keeping responses well below Vercel's function payload
+limit.
 
-8. Open your web browser and navigate to `http://localhost:3000` to access the front-end application.
+## Legacy implementation
 
-### Option 2: Docker Setup
-
-1. Ensure you have Docker installed on your system.
-
-2. Build the Docker image:
-
-   ```
-   docker build -t chaindensity .
-   ```
-
-3. Run the Docker container:
-
-   ```
-   docker run -p 5001:5001 chaindensity
-   ```
-
-4. Open your web browser and navigate to `http://localhost:5001`.
-
-## Usage
-
-1. Enter an Ethereum address in the "Address" field.
-2. Select "Event" or "Transaction" from the dropdown menu.
-3. Choose a network from the "Network" dropdown.
-4. Click "Submit" to generate the density plot.
-
-## Example Searches
-
-- Blast L2 Bridge - Event Density
-- OP Token - Transaction Density
-- Fren Pet - Event Density
-
-## Contributing
-
-If you have ideas or want to contribute, please join our [Discord](https://discord.gg/zNZYBNtbZV).
+The root Python/Quart application and checked-in Parquet data are retained only
+as migration reference. They are not used by the Next.js application or the
+Vercel deployment.
 
 ## License
 
-[MIT License](LICENSE)
-
-## Acknowledgements
-
-Made by envio and powered by [Hypersync](https://envio.dev).
+[MIT](LICENSE)

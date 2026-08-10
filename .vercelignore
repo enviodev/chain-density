@@ -1,0 +1,5 @@
+# The production app lives entirely in the frontend pnpm workspace.
+/*
+!front-end
+front-end/.turbo
+front-end/**/.turbo

@@ -7,9 +7,11 @@ export default function Header() {
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2">
-            <img
+            <Image
               src="/static/densityImage2.png"
               alt="Chain Density Logo"
+              width={32}
+              height={32}
               className="h-8 w-8"
             />
             <div className="font-bold text-xl text-gray-900">Chain Density</div>

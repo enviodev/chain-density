@@ -1,21 +1,20 @@
 import { useState, useEffect } from "react";
 
+const loadingMessages = [
+  "We're retrieving and processing blockchain data. This may take a moment...",
+  "Generally, retrieving one million events can take around 5 seconds, but it depends on the chain and address density.",
+  "Addresses with high activity (like DEXes or bridges) may take longer to analyze due to the volume of data.",
+  "We're using HyperSync to efficiently query blockchain data across 80+ chains.",
+  "The visualization will show you patterns in blockchain activity over time.",
+  "Different chains have different block times, which affects how long this analysis takes.",
+  "We're analyzing historical data to identify trends and patterns in blockchain activity.",
+  "This tool is useful for understanding indexing efforts and activity density.",
+];
+
 export default function LoadingState() {
   const [messageIndex, setMessageIndex] = useState(0);
   const [progressWidth, setProgressWidth] = useState(15);
   const [elapsedTime, setElapsedTime] = useState(0);
-
-  // Array of informative messages that will rotate
-  const loadingMessages = [
-    "We're retrieving and processing blockchain data. This may take a moment...",
-    "Generally, retrieving one million events can take around 5 seconds, but it depends on the chain and address density.",
-    "Addresses with high activity (like DEXes or bridges) may take longer to analyze due to the volume of data.",
-    "We're using Hypersync to efficiently query blockchain data across 60+ chains.",
-    "The visualization will show you patterns in blockchain activity over time.",
-    "Different chains have different block times, which affects how long this analysis takes.",
-    "We're analyzing historical data to identify trends and patterns in blockchain activity.",
-    "This tool is useful for understanding indexing efforts and activity density.",
-  ];
 
   // Update the message every 5 seconds
   useEffect(() => {

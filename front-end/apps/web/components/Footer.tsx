@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Footer() {
   return (
@@ -6,7 +7,13 @@ export default function Footer() {
       <div className="container mx-auto px-4">
         <div className="flex justify-center items-center">
           <div className="flex items-center gap-2">
-            <img src="/static/envio.png" alt="Envio Logo" className="h-6" />
+            <Image
+              src="/static/envio.png"
+              alt="Envio Logo"
+              width={369}
+              height={92}
+              className="h-6 w-auto"
+            />
             <span className="text-sm text-gray-700">
               Made by{" "}
               <Link

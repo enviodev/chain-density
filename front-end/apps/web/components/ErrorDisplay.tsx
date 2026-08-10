@@ -51,12 +51,12 @@ export default function ErrorDisplay({ message }: ErrorDisplayProps) {
                 <div className="mt-2 text-sm text-red-700 bg-red-100 p-3 rounded">
                   <h4 className="font-medium mb-2">Troubleshooting steps:</h4>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li>Check if the API server is running</li>
+                    <li>Confirm the address and selected network</li>
+                    <li>Retry in case the upstream network was unavailable</li>
                     <li>
-                      Verify your .env configuration for NEXT_PUBLIC_API_URL
-                      (current: {process.env.NEXT_PUBLIC_API_URL || "/api"})
+                      For deployments, verify ENVIO_API_TOKEN is configured in
+                      Vercel
                     </li>
-                    <li>Ensure there are no CORS issues</li>
                     <li>Try refreshing the page</li>
                     <li>
                       <strong>Check the browser console</strong> for more
@@ -65,38 +65,18 @@ export default function ErrorDisplay({ message }: ErrorDisplayProps) {
                     </li>
                   </ul>
 
-                  {isApiError &&
-                    message.includes("API returned non-JSON response") && (
-                      <p className="mt-3">
-                        The API is returning a non-JSON response. This typically
-                        happens when:
-                        <ul className="list-disc pl-5 mt-1">
-                          <li>The API server is down</li>
-                          <li>
-                            There's a CORS issue preventing proper response
-                            headers
-                          </li>
-                          <li>The API endpoint URL is incorrect</li>
-                          <li>
-                            The API is returning an HTML error page instead of
-                            JSON
-                          </li>
-                        </ul>
-                      </p>
-                    )}
-
                   {isApiError && message.includes("API error:") && (
                     <p className="mt-3">
-                      The API server responded with an error status code. Check
-                      your browser console for more details about the response.
+                      The analysis route returned an error status. Check the
+                      Vercel function logs for upstream details.
                     </p>
                   )}
 
                   {isNetworkError && (
                     <p className="mt-3">
                       A network error occurred. This can happen when your
-                      internet connection is unstable or the API server is
-                      unreachable.
+                      internet connection is unstable or HyperSync is
+                      temporarily unreachable.
                     </p>
                   )}
                 </div>

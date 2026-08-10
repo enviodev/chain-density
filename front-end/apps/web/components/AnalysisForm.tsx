@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface AnalysisFormProps {
   networks: string[];
@@ -14,6 +14,15 @@ export default function AnalysisForm({
   const [address, setAddress] = useState("");
   const [requestType, setRequestType] = useState("event");
   const [network, setNetwork] = useState("");
+  const defaultNetwork =
+    networks
+      .find((net) =>
+        ["ethereum", "eth", "mainnet"].includes(net.toLowerCase())
+      )
+      ?.toLowerCase() ??
+    networks[0]?.toLowerCase() ??
+    "";
+  const selectedNetwork = network || defaultNetwork;
 
   // Example addresses for quick testing
   const exampleAddresses = [
@@ -49,28 +58,9 @@ export default function AnalysisForm({
     },
   ];
 
-  // Set initial network when networks are loaded
-  useEffect(() => {
-    if (networks.length > 0 && !network) {
-      // Default to ethereum if available, otherwise first network
-      const ethNetwork = networks.find(
-        (net) =>
-          net.toLowerCase() === "ethereum" ||
-          net.toLowerCase() === "eth" ||
-          net.toLowerCase() === "mainnet"
-      );
-
-      if (ethNetwork) {
-        setNetwork(ethNetwork.toLowerCase());
-      } else if (networks[0]) {
-        setNetwork(networks[0].toLowerCase());
-      }
-    }
-  }, [networks, network]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(address, requestType, network);
+    onSubmit(address, requestType, selectedNetwork);
   };
 
   const handleExampleClick = (example: (typeof exampleAddresses)[number]) => {
@@ -238,7 +228,7 @@ export default function AnalysisForm({
               <select
                 id="network"
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-envio-500 focus:border-envio-500 transition-colors appearance-none text-gray-800 pr-10 font-medium"
-                value={network}
+                value={selectedNetwork}
                 onChange={(e) => setNetwork(e.target.value)}
                 required
                 style={{

@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: ["./app/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
@@ -101,7 +101,7 @@ module.exports = {
     },
   },
   plugins: [
-    function ({ addUtilities, addComponents, addBase, theme }) {
+    function ({ addUtilities }) {
       addUtilities({
         ".animation-delay-1000": {
           "animation-delay": "1s",
